@@ -114,12 +114,17 @@ While talking to the Tech Lead, you can use the following quick commands:
 
 ## 🧠 Memory Management (Context Window Protection)
 
-As AI agents work autonomously, their conversation history (context) can grow exponentially, eventually exceeding the API's token limits or causing performance degradation. To solve this, `coder-agent` implements an intelligent memory management system:
+As AI agents work autonomously, their conversation history (context) can grow exponentially, eventually exceeding the API's token limits or causing performance degradation. To solve this, `coder-agent` implements an intelligent memory management system tailored to each agent's role:
 
-*   **Continuous Summarization**: The `memory.py` module actively monitors the length of the agent's message history.
-*   **Context Compression**: When the history becomes too long, the system compresses previous interactions into a dense summary, preserving the "knowledge" of what was done without keeping the verbose back-and-forth dialogue.
-*   **Tool Call Preservation**: Crucially, it extracts and preserves the most recent tool calls and execution results, ensuring the agent never loses its immediate short-term memory of the files it just edited or the errors it just saw.
-*   **Truncation Safeguards**: Reading large files or executing scripts that dump massive amounts of logs to the terminal are automatically truncated to prevent a single action from instantly blowing up the context window.
+### 🦸‍♂️ For the Tech Lead (Manager)
+*   **Continuous Summarization**: The Tech Lead has access to the `memory.py` module, which actively monitors the length of the agent's message history.
+*   **Context Compression**: When the history becomes too long, the system uses the Mistral API to seamlessly compress older interactions into a dense summary. This preserves the "knowledge" of what was built and discussed without keeping the verbose back-and-forth dialogue.
+*   **State Tracking**: By relying on the persistent `project_state.json` file, the Manager can afford to compress its history heavily while never losing sight of the overall goal and next steps.
+
+### 🧑‍💻 For the Developer (Worker)
+*   **Sliding Window Truncation**: Unlike the Manager, the Worker operates heavily in the present. Instead of summarizing, it uses a highly efficient character-based sliding window.
+*   **Preserving the Core**: When the Worker's memory gets too large (e.g., from long tracebacks), it cleanly slices out the middle of the conversation history. It ALWAYS preserves the original system prompt, the Manager's latest instructions, and the most recent tool calls and errors.
+*   **Terminal Safeguards**: Reading large files or executing scripts that dump massive amounts of logs to the terminal are automatically truncated. This prevents a single errant print statement from instantly blowing up the context window.
 
 ---
 
