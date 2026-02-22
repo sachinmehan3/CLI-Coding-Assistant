@@ -1,0 +1,22 @@
+[project]
+name = "coder-agent"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "celluloid>=0.2.0",
+    "colorama>=0.4.6",
+    "customtkinter>=5.2.2",
+    "ddgs>=9.10.0",
+    "matplotlib>=3.10.8",
+    "mistralai>=1.12.3",
+    "numpy>=2.4.2",
+    "pillow>=12.1.1",
+    "pyfiglet>=1.0.4",
+    "pygame>=2.6.1",
+    "python-dotenv>=1.2.1",
+    "requests>=2.32.5",
+    "rich>=14.3.2",
+    "tenacity>=9.1.4",
+]
