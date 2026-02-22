@@ -1,4 +1,4 @@
-# 🚀 AI Tech Lead & Developer Agency
+# CLI Coding Assistant
 
 An autonomous, multi-agent programming framework powered by **Mistral AI**. This project creates a virtual software development agency right in your terminal, consisting of a **Tech Lead** (Manager) who plans and delegates, and a **Developer** (Worker) who writes, tests, and refines the code.
 
