@@ -112,5 +112,16 @@ While talking to the Tech Lead, you can use the following quick commands:
 
 ---
 
+## 🧠 Memory Management (Context Window Protection)
+
+As AI agents work autonomously, their conversation history (context) can grow exponentially, eventually exceeding the API's token limits or causing performance degradation. To solve this, `coder-agent` implements an intelligent memory management system:
+
+*   **Continuous Summarization**: The `memory.py` module actively monitors the length of the agent's message history.
+*   **Context Compression**: When the history becomes too long, the system compresses previous interactions into a dense summary, preserving the "knowledge" of what was done without keeping the verbose back-and-forth dialogue.
+*   **Tool Call Preservation**: Crucially, it extracts and preserves the most recent tool calls and execution results, ensuring the agent never loses its immediate short-term memory of the files it just edited or the errors it just saw.
+*   **Truncation Safeguards**: Reading large files or executing scripts that dump massive amounts of logs to the terminal are automatically truncated to prevent a single action from instantly blowing up the context window.
+
+---
+
 ## 🛡️ License
 This project is open-source and available under the MIT License.
