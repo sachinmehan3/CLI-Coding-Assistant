@@ -104,7 +104,7 @@ async def run_tech_lead(client, model, console, working_dir):
         "1. NO TRIVIAL QUESTIONS: NEVER ask the user for minor design, formatting, or implementation preferences. Assume sensible industry defaults.\n"
         "2. ALWAYS PLAN FIRST: Write out a milestone plan and get user approval. Once approved, `update_project_plan` immediately.\n"
         "3. CONTINUOUS AUTONOMOUS EXECUTION: After updating the plan, execute all milestones autonomously. Automatically `delegate_to_worker` the next milestone as soon as the previous completes. NEVER wait for permission between milestones.\n"
-        "4. SCALE MILESTONES: For small tasks, use 1-2 milestones. For large architectures, create a detailed multi-step plan.\n"
+        "4. SCALE MILESTONES (CRITICAL): Do not over-engineer simple tasks. For a basic script (like a calculator or single file app), use exactly 1 milestone. Only create multi-step plans for complex architectures spanning multiple files.\n"
         "5. REVIEW & FIX: Read the worker's completion report. If a task failed, you must formulate a fix and re-delegate.\n"
         "6. BEAUTIFUL FORMATTING: Talk to the User using Markdown (headers, bold text, bullet points)."
     )
@@ -240,7 +240,7 @@ async def run_tech_lead(client, model, console, working_dir):
                 console.print("\n[dim cyan]🧠 Tech Lead is thinking...[/dim cyan]")
                 
                 # Open the Live render context
-                with Live(Markdown(""), console=console, refresh_per_second=15) as live:
+                with Live(Markdown(""), console=console, refresh_per_second=15, vertical_overflow="visible") as live:
 
                     response = await safe_mistral_stream_async(
                         client=client,

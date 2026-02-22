@@ -6,6 +6,7 @@ from rich.markdown import Markdown
 from functions.get_files_info import get_file_info
 from functions.get_file_content import get_file_content
 from functions.write_file import write_file
+from functions.edit_file import edit_file
 from functions.create_directory import create_directory
 from functions.run_python_file import run_python_file
 from functions.web_search import web_search
@@ -79,7 +80,7 @@ async def run_worker_agent(client, model, console, task_description, working_dir
             "type": "function",
             "function": {
                 "name": "write_file",
-                "description": "Creates a new file or OVERWRITES an existing file. You MUST provide the ENTIRE, complete file content from top to bottom. Never output partial code, snippets, or placeholders.",
+                "description": "Creates a NEW file. Do not use this for modifying existing files. You MUST provide the ENTIRE, complete file content from top to bottom.",
                 "parameters": {
                     "type": "object",
                     "properties": {
@@ -87,6 +88,22 @@ async def run_worker_agent(client, model, console, task_description, working_dir
                         "content": {"type": "string", "description": "The complete, final code for the file."}
                     },
                     "required": ["file_path", "content"]
+                }
+            }
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "edit_file",
+                "description": "Edits an existing file by replacing a specific search string with a new replace string. Use this to modify files without rewriting them completely.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "file_path": {"type": "string", "description": "The EXACT path to the file to edit."},
+                        "search": {"type": "string", "description": "The exact string to search for and replace. Must match the file contents PERFECTLY, including whitespace and indentation."},
+                        "replace": {"type": "string", "description": "The new string that will replace the search string."}
+                    },
+                    "required": ["file_path", "search", "replace"]
                 }
             }
         },
@@ -211,7 +228,8 @@ async def run_worker_agent(client, model, console, task_description, working_dir
             "AVAILABLE TOOLS & WHEN TO USE THEM:\n"
             "- `get_files_info`: Use to map out the directory structure and discover files. Skip hidden/env folders.\n"
             "- `get_file_content`: Use once BEFORE modifying a file to gather its exact contents.\n"
-            "- `write_file`: Use to create or overwrite a file. CRITICAL: You MUST provide the ENTIRE, complete file content. NEVER use placeholders or partial code.\n"
+            "- `write_file`: Use to create a NEW file. CRITICAL: You MUST provide the ENTIRE, complete file content.\n"
+            "- `edit_file`: Use to modify an EXISTING file. Provide the exact string to search for and the replacement string.\n"
             "- `create_directory`: Use to create nested folders BEFORE explicitly writing files into them.\n"
             "- `run_linter`: Use on `.py` files strictly to check for syntax and import errors. ALWAYS do this BEFORE running new code.\n"
             "- `run_python_file`: Executes a script for STDOUT/STDERR. NEVER execute GUI apps or blocking servers.\n"
@@ -221,7 +239,7 @@ async def run_worker_agent(client, model, console, task_description, working_dir
             "- `finish_task`: End your turn. Provide a clear summary of modifications/results.\n\n"
 
             "OPERATIONAL RULES:\n"
-            "1. NO BLIND OVERWRITES: If a file exists, `get_file_content` it first. Then `write_file` it wholly.\n"
+            "1. NO BLIND OVERWRITES: If a file exists, `get_file_content` it first. Then use `edit_file` to modify it.\n"
             "2. RELATIVE PATHS: All paths are relative. Do not invent absolute paths.\n"
             "3. EXTREME CONCISENESS: Output ONE single sentence stating your immediate next action before calling a tool. No paragraphs.\n"
             "4. SELF-CORRECTION: If `run_linter` or `run_python_file` yields errors, FIX them repeatedly before `finish_task`.\n"
@@ -302,7 +320,7 @@ async def run_worker_agent(client, model, console, task_description, working_dir
         console.print("\n[dim cyan]⚙️ Worker is thinking...[/dim cyan]")
         
         # Start a rich live block to visually smoothly append tokens to the console as they come from the API
-        with Live(Markdown(""), console=console, refresh_per_second=15) as live:
+        with Live(Markdown(""), console=console, refresh_per_second=15, vertical_overflow="visible") as live:
             response = await safe_mistral_stream_async(
                 client=client,
                 model=model,
@@ -421,6 +439,26 @@ async def run_worker_agent(client, model, console, task_description, working_dir
                             console.print(f"[bold green]✓[/bold green] [dim]Wrote file: {file_path}[/dim]")
                         else:
                             function_result = "SYSTEM ERROR: User denied permission to write file." 
+
+                elif function_name == "edit_file":
+                    file_path = args.get("file_path")
+                    search_str = args.get("search")
+                    replace_str = args.get("replace")
+                    
+                    approval = 'y' if auto_mode else ''
+                    if auto_mode:
+                        console.print(f"[dim yellow]⚡ Auto-approving edit to '{file_path}'[/dim yellow]")
+                    else:
+                        console.print(f"\n[bold red] WARNING: Worker wants to EDIT '{file_path}'.[/bold red]")
+                        while approval.strip().lower() not in ['y', 'yes', 'n', 'no']:
+                            approval = await asyncio.to_thread(console.input, "[bold red]Approve file edit? (y/n) > [/bold red]")
+                    
+                    with console.status(f"[bold cyan]Editing {file_path}...[/bold cyan]", spinner="dots"):
+                        if approval.strip().lower() in ['y', 'yes']:
+                            function_result = await asyncio.to_thread(edit_file, working_dir, file_path, search_str, replace_str)
+                            console.print(f"[bold green]✓[/bold green] [dim]Edited file: {file_path}[/dim]")
+                        else:
+                            function_result = "SYSTEM ERROR: User denied permission to edit file."
 
                 elif function_name == "run_python_file":
                     file_path = args.get("file_path")
