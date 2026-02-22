@@ -7,7 +7,7 @@ An autonomous, multi-agent programming framework powered by **Mistral AI**. This
 
 ---
 
-## � Demo
+## Demo
 <!-- Add your demo video link here, e.g. YouTube or mp4 URL -->
 [Watch the Demo Video](https://github.com/user-attachments/assets/bb34bc14-28a1-4f5d-969c-51513674e6fe)
 
@@ -17,7 +17,7 @@ An autonomous, multi-agent programming framework powered by **Mistral AI**. This
 
 ---
 
-## �🌟 Key Features
+## 🌟 Key Features
 
 *   **👥 Two-Agent Architecture**: 
     *   **Manager (Tech Lead)**: Translates your requests into actionable milestones, updates the project tracker, and orchestrates the Worker.
@@ -121,10 +121,6 @@ While talking to the Tech Lead, you can use the following quick commands:
 6.  The **Tech Lead** marks the milestone as complete and immediately delegates the next one, repeating until the project is finished!
 
 ---
-
-## 🧠 Memory Management (Context Window Protection)
-
-As AI agents work autonomously, their conversation history (context) can grow exponentially, eventually exceeding the API's token limits or causing performance degradation. To solve this, `coder-agent` implements an intelligent memory management system tailored to each agent's role:
 
 ### 🦸‍♂️ For the Tech Lead (Manager)
 *   **Milestone-Driven Context**: The Manager doesn't need to know every line of code written. Its memory is focused on high-level planning and the current milestone.
