@@ -16,6 +16,7 @@ from functions.get_file_content import get_file_content
 from functions.project_state import get_project_state, update_project_state
 from memory import summarize_manager_history
 from worker import run_worker_agent
+from ai_utils import safe_mistral_stream_async
 
 # ==========================================
 # THE MANAGER AGENT (The Tech Lead)
@@ -241,7 +242,8 @@ async def run_tech_lead(client, model, console, working_dir):
                 # Open the Live render context
                 with Live(Markdown(""), console=console, refresh_per_second=15) as live:
 
-                    response = await client.chat.stream_async(
+                    response = await safe_mistral_stream_async(
+                        client=client,
                         model=model,
                         messages=manager_messages,
                         tools=manager_tools

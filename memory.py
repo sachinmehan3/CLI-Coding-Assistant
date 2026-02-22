@@ -1,3 +1,5 @@
+from ai_utils import safe_mistral_complete_async
+
 async def summarize_manager_history(client, model, messages_to_summarize):
     """
     Uses Mistral to compress older conversation history into a dense summary.
@@ -49,7 +51,8 @@ async def summarize_manager_history(client, model, messages_to_summarize):
     )
 
     # Make the API call to Mistral to get the actual summary text
-    response = await client.chat.complete_async(
+    response = await safe_mistral_complete_async(
+        client=client,
         model=model,
         messages=[{"role": "user", "content": prompt}]
     )

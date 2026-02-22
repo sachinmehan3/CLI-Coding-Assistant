@@ -12,6 +12,7 @@ from functions.web_search import web_search
 from functions.install_package import install_package
 from functions.run_linter import run_linter
 import asyncio
+from ai_utils import safe_mistral_stream_async
 
 # ==========================================
 # THE WORKER AGENT (The Developer)
@@ -302,7 +303,8 @@ async def run_worker_agent(client, model, console, task_description, working_dir
         
         # Start a rich live block to visually smoothly append tokens to the console as they come from the API
         with Live(Markdown(""), console=console, refresh_per_second=15) as live:
-            response = await client.chat.stream_async(
+            response = await safe_mistral_stream_async(
+                client=client,
                 model=model,
                 messages=messages,
                 tools=tools
