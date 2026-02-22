@@ -128,12 +128,12 @@ As AI agents work autonomously, their conversation history (context) can grow ex
 
 ### 🦸‍♂️ For the Tech Lead (Manager)
 *   **Milestone-Driven Context**: The Manager doesn't need to know every line of code written. Its memory is focused on high-level planning and the current milestone.
-*   **State Tracking**: By relying on the persistent `project_state.json` file, the Manager can afford to have its verbose conversation history compressed heavily without losing sight of the overall goal and next steps.
+*   **Active Summarization**: The `memory.py` module actively monitors the length of the Manager's context. When the history becomes too long, the system compresses older conversations into a dense summary, preserving key decisions and context without the bloat.
+*   **State Tracking**: By relying on the persistent `project_state.json` file, the Manager maintains an accurate absolute truth of the overall goal and next steps, even after its chat history is summarized.
 
 ### 🧑‍💻 For the Developer (Worker)
-*   **Continuous Summarization**: The `memory.py` module actively monitors the length of the Worker's active coding session limits.
-*   **Context Compression**: When the history becomes too long, the system compresses older iterations (like failed linting or execution attempts) into a dense summary, preserving the "knowledge" without the bloat.
-*   **Tool Call Preservation**: Crucially, it extracts and preserves the most recent tool calls and execution results, ensuring the Worker never loses its vital short-term memory of the code it just edited or the exact error it just saw.
+*   **Sliding Window Conservation**: The Worker actively tracking the character length of its coding iterations. When the context exceeds a safe limit, older steps (like early failed linting or execution attempts) are systematically truncated to protect the context window.
+*   **Context & Tool Call Preservation**: During truncation, the Worker anchors the core instructions and the Manager's initial task objective. It perfectly preserves the most recent tool calls and execution results, ensuring it never loses its vital short-term memory of the exact code or error it is currently fixing.
 *   **Truncation Safeguards**: Reading large files or executing scripts that dump massive amounts of logs to the terminal are automatically truncated. This prevents a single errant print statement from instantly blowing up the context window.
 
 ---
