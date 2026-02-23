@@ -171,7 +171,6 @@ async def run_worker_agent(client, model, console, task_description, working_dir
                 })
             continue 
         else:
-            # --- THE GUARDRAIL ---
             # If the worker just talks without using a tool, nudge it back!
             nudge = "SYSTEM: You output text but did not call a tool. If you are trying to write code, you MUST use the `write_file` tool. If the task is completely finished, you MUST call the `finish_task` tool to exit."
             messages.append({"role": "user", "content": nudge})
