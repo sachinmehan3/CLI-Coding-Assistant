@@ -8,7 +8,11 @@ from memory import summarize_manager_history
 from worker import run_worker_agent
 
 def display_project_tracker(working_dir, console):
-    """Displays the current state of the project tracker via a Rich Panel."""
+    """
+    Displays the current state of the project tracker via a beautifully formatted Rich Panel.
+    This UI component reads the JSON state file and visually separates the overarching goal, 
+    the active milestone, and the lists of completed vs. pending tasks for easy human readability.
+    """
     try:
         state_str = get_project_state(working_dir)
         current_state = json.loads(state_str)
@@ -29,13 +33,23 @@ def display_project_tracker(working_dir, console):
             status_markdown += "- *None*\n"
             
         console.print("\n")
-        console.print(Panel(Markdown(status_markdown), title="[bold blue]🚀 Project Tracker[/bold blue]", border_style="blue", expand=False))
+        console.print(Panel(Markdown(status_markdown), title="[bold blue] Project Tracker[/bold blue]", border_style="blue", expand=False))
         console.print("\n")
     except Exception as e:
         console.print(f"[bold red]Could not read project tracker: {e}[/bold red]")
 
 async def trim_manager_memory(manager_messages, max_chars, console, client, model):
-    """Trims the Tech Lead's memory by summarizing older parts of the conversation."""
+    """
+    Trims the Tech Lead's memory by intelligently summarizing older parts of the conversation.
+    This prevents the AI's context limit from being exceeded while preserving critical details.
+    
+    The strategy:
+    1. Keep the System Prompt (Index 0) untouched.
+    2. Keep the most recent 8 messages (the "tail") untouched for immediate context.
+    3. Take all messages in between (the "middle"), send them to a secondary LLM call, 
+       and ask it to compress them into a dense factual summary.
+    4. Replace the middle messages with a single new "System" message containing that summary.
+    """
     def get_msg_length(msg):
         content = msg.get("content") if isinstance(msg, dict) else getattr(msg, "content", "")
         tool_calls = msg.get("tool_calls", []) if isinstance(msg, dict) else getattr(msg, "tool_calls", [])
@@ -78,10 +92,16 @@ async def trim_manager_memory(manager_messages, max_chars, console, client, mode
     return manager_messages
 
 async def execute_manager_tool(tc_name, tc_args_string, tc_id, working_dir, console, client, model, auto_mode):
-    """Handles parsing and executing tools for the Manager Agent."""
+    """
+    Central router for executing the Manager Agent's assigned tools.
+    Takes the raw parsed tool call data from Mistral, matches it to the correct local Python function,
+    executes the logic, and formats the return message exactly how Mistral's API expects tool responses.
+    """
     try:
+        # Mistral passes tool arguments as a JSON string, so we must parse it first.
         args = json.loads(tc_args_string)
     except json.JSONDecodeError:
+        # If the AI hallucinates bad JSON, we return an error message to let it try again.
         return {
             "role": "tool",
             "name": tc_name,
@@ -89,18 +109,20 @@ async def execute_manager_tool(tc_name, tc_args_string, tc_id, working_dir, cons
             "tool_call_id": tc_id 
         }
     
-    # --- PLAN UPDATING ---
+    # --- PLAN UPDATING LOGIC ---
+    # Triggered when the Tech Lead wants to establish or modify the milestone roadmap.
     if tc_name == "update_project_plan":
         try:
             current_state = json.loads(get_project_state(working_dir))
         except Exception:
+            # First time initialization fallback if the file doesn't exist or is corrupted.
             current_state = {
                 "status": "in_progress",
                 "completed_milestones": [],
                 "current_milestone": None
             }
         
-        # Update the goal and pending milestones
+        # Override the existing goal and pending milestones with the new data from the Tech Lead.
         current_state["project_goal"] = args.get("project_goal", current_state.get("project_goal"))
         current_state["pending_milestones"] = args.get("milestones", [])
         if "status" not in current_state:
@@ -122,31 +144,39 @@ async def execute_manager_tool(tc_name, tc_args_string, tc_id, working_dir, cons
         }
 
     # --- DELEGATION LOGIC ---
+    # Triggered when the Tech Lead is ready to assign a specific task to the Worker agent.
     elif tc_name == "delegate_to_worker":
+        # Extract the metadata for this specific assignment
         target_milestone = args.get("target_milestone")
         task = args.get("task_description")
         
-        # 1. Update state to show what is currently happening
+        # 1. Update the tracker state so the UI shows this milestone is currently active.
         current_state = json.loads(get_project_state(working_dir))
         current_state["current_milestone"] = target_milestone
         update_project_state(working_dir, current_state)
 
-        # 2. Run the Worker
+        # 2. Synchronous/Blocking call to run the Worker. 
+        # The Manager goes to "sleep" and waits here until the Worker fully finishes its sub-agent loop.
         worker_report = await run_worker_agent(client, model, console, task, working_dir, auto_mode)
 
         # 3. DETERMINISTIC STATE UPDATE (The Worker Finished!)
+        # Now that the worker is done, we auto-advance the tracker locally.
         current_state = json.loads(get_project_state(working_dir))
         
+        # Remove the milestone from pending and append to completed
         if target_milestone in current_state["pending_milestones"]:
             current_state["pending_milestones"].remove(target_milestone)
         
         if target_milestone not in current_state["completed_milestones"]:
             current_state["completed_milestones"].append(target_milestone)
             
+        # Clear the active status because the worker has returned.
         current_state["current_milestone"] = None
         
-        # Save the truth to disk
+        # Save the finalized truth to disk.
         update_project_state(working_dir, current_state)
+
+        # Return a summarized report back to the Manager so it knows if the Worker succeeded or failed.
 
         return {
             "role": "tool",
