@@ -226,8 +226,8 @@ async def run_tech_lead(client, model, console, working_dir):
                 # Dynamically update the System Prompt (Index 0) with both!
                 manager_messages[0]["content"] = (
                     f"{MANAGER_BASE_PROMPT}\n\n"
-                    f"📂 CURRENT PROJECT FILES:\n{current_project_state}\n\n"
-                    f"📋 CURRENT PROJECT TRACKER:\n{current_tracker_json}"
+                    f" CURRENT PROJECT FILES:\n{current_project_state}\n\n"
+                    f" CURRENT PROJECT TRACKER:\n{current_tracker_json}"
                 )
     
 
