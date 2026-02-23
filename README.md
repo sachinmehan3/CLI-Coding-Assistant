@@ -46,6 +46,8 @@ coder-agent/
 │
 ├──  main.py               # Application entry point
 ├──  manager.py            # The Tech Lead Agent loop and tools
+├──  manager_tools.py      # Tech Lead Agent tool definitions
+├──  manager_helpers.py    # Tech Lead Agent logic helpers
 ├──  worker.py             # The Developer Agent loop and tools
 ├──  worker_tools.py       # Developer Agent tool definitions
 ├──  worker_helpers.py     # Developer Agent logic helpers

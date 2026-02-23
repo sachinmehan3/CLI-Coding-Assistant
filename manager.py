@@ -12,77 +12,19 @@ import asyncio
 
 # Import the manager's dependencies
 from functions.get_files_info import get_file_info
-from functions.get_file_content import get_file_content
-from functions.project_state import get_project_state, update_project_state
-from memory import summarize_manager_history
-from worker import run_worker_agent
+from functions.project_state import get_project_state
 from ai_utils import safe_mistral_stream_async
+
+# Import manager refactored tools and helpers
+from manager_tools import MANAGER_TOOLS
+from manager_helpers import display_project_tracker, trim_manager_memory, execute_manager_tool
 
 # ==========================================
 # THE MANAGER AGENT (The Tech Lead)
 # ==========================================
 async def run_tech_lead(client, model, console, working_dir):
     # These are the JSON-schema definitions for tools the Manager AI is permitted to use.
-    # The language model uses these definitions to determine when and how to call a specific python function.
-    manager_tools = [
-{
-            "type": "function",
-            "function": {
-                "name": "delegate_to_worker",
-                "description": "Delegates a coding task to the developer.",
-                "parameters": {
-                    "type": "object",
-                    "properties": {
-                        "target_milestone": {
-                            "type": "string",
-                            "description": "The exact name of the milestone from your initialized plan that this task fulfills."
-                        },
-                        "task_description": {
-                            "type": "string",
-                            "description": "A detailed, step-by-step explanation..."
-                        }
-                    },
-                    "required": ["target_milestone", "task_description"]
-                }
-            }
-        },
-{
-            "type": "function",
-            "function": {
-                "name": "update_project_plan",
-                "description": "Use this to update the project plan tracker. Call this whenever you have a new milestone plan approved by the user, or when the worker completes its task and the loop continues, to reflect the updated remaining milestones.",
-                "parameters": {
-                    "type": "object",
-                    "properties": {
-                        "project_goal": {"type": "string", "description": "The overall goal."},
-                        "milestones": {
-                            "type": "array",
-                            "items": {"type": "string"},
-                            "description": "A chronological list of the remaining or updated major milestones required to finish the project."
-                        }
-                    },
-                    "required": ["project_goal", "milestones"]
-                }
-            }
-        },
-        {
-            "type": "function",
-            "function": {
-                "name": "get_file_content",
-                "description": "Reads and returns the text content of a specified file. Use this to understand existing code architecture before delegating a task to the worker.",
-                "parameters": {
-                    "type": "object",
-                    "properties": {
-                        "file_path": {
-                            "type": "string",
-                            "description": "The EXACT path to the file you want to read (e.g., 'functions/api.py'). Do not guess this path."
-                        }
-                    },
-                    "required": ["file_path"]
-                }
-            }
-        }
-    ]
+    manager_tools = MANAGER_TOOLS
 
     MANAGER_BASE_PROMPT = (
         "You are an expert, highly autonomous Tech Lead overseeing a developer agent. "
@@ -126,7 +68,6 @@ async def run_tech_lead(client, model, console, working_dir):
             if user_input.lower() in ["exit", "quit"]:
                 break
             
-
             # --- Catch slash commands ---
             cmd = user_input.strip().lower()
             if cmd == "/auto":
@@ -140,30 +81,7 @@ async def run_tech_lead(client, model, console, working_dir):
                 continue
                 
             elif cmd in ["/status", "/plan"]:
-                try:
-                    state_str = get_project_state(working_dir)
-                    current_state = json.loads(state_str)
-                    goal = current_state.get("project_goal", "Not set")
-                    status = current_state.get("status", "Not started")
-                    curr = current_state.get("current_milestone", "None")
-                    
-                    status_markdown = f"**Goal:** {goal}\n\n**Status:** {status.upper()} | **Current:** {curr}\n\n**Completed:**\n"
-                    for m in current_state.get("completed_milestones", []):
-                        status_markdown += f"- {m}\n"
-                    if not current_state.get("completed_milestones"):
-                        status_markdown += "- *None yet*\n"
-                        
-                    status_markdown += "\n**Pending:**\n"
-                    for m in current_state.get("pending_milestones", []):
-                        status_markdown += f"- {m}\n"
-                    if not current_state.get("pending_milestones"):
-                        status_markdown += "- *None*\n"
-                        
-                    console.print("\n")
-                    console.print(Panel(Markdown(status_markdown), title="[bold blue] Project Tracker[/bold blue]", border_style="blue", expand=False))
-                    console.print("\n")
-                except Exception as e:
-                    console.print(f"[bold red]Could not read project tracker: {e}[/bold red]")
+                display_project_tracker(working_dir, console)
                 continue
             # --------------------------------
 
@@ -178,45 +96,7 @@ async def run_tech_lead(client, model, console, working_dir):
                 # A hard limit on context window size to stop the AI from reading too much and crashing.
                 MAX_MANAGER_CHARS = 40000  # roughly 10,000 tokens
                 
-                # Simple function to count the size of a message, including any nested JSON tool blocks
-                def get_msg_length(msg):
-                    content = msg.get("content") if isinstance(msg, dict) else getattr(msg, "content", "")
-                    tool_calls = msg.get("tool_calls", []) if isinstance(msg, dict) else getattr(msg, "tool_calls", [])
-                    return len(str(content)) + len(str(tool_calls))
-
-                total_manager_length = sum(get_msg_length(m) for m in manager_messages)
-
-                if total_manager_length > MAX_MANAGER_CHARS:
-                    console.print(f"\n[dim yellow] Tech Lead memory reached {total_manager_length} chars. Summarizing older tasks...[/dim yellow]")
-                    
-                    system_prompt = manager_messages[0]
-                    
-                    # Keep the last 8 messages so the Manager doesn't lose immediate context
-                    tail = manager_messages[-8:]
-                    
-                    # Ensure we don't orphan a 'tool' message from its 'assistant' call
-                    while len(tail) > 0:
-                        first_msg = tail[0]
-                        role = first_msg.get("role") if isinstance(first_msg, dict) else getattr(first_msg, "role", "")
-                        if role == "tool":
-                            tail.pop(0)
-                        else:
-                            break
-                            
-                    # The "middle" is everything between the system prompt and our protected tail
-                    middle_messages = manager_messages[1 : len(manager_messages) - len(tail)]
-                    
-                    # Generate the summary using the secondary Mistral call
-                    summary_text = await summarize_manager_history(client, model, middle_messages)
-                    
-                    # Package the summary as a persistent system context block
-                    summary_message = {
-                        "role": "system", 
-                        "content": f"PREVIOUS TASKS SUMMARY:\n{summary_text}"
-                    }
-                    
-                    # Rebuild the Manager's brain!
-                    manager_messages = [system_prompt, summary_message] + tail
+                manager_messages = await trim_manager_memory(manager_messages, MAX_MANAGER_CHARS, console, client, model)
                 # --- END NEW CONTEXT ENGINEERING ---
 
                 # FETCH THE LATEST REALITY
@@ -230,7 +110,6 @@ async def run_tech_lead(client, model, console, working_dir):
                     f" CURRENT PROJECT TRACKER:\n{current_tracker_json}"
                 )
     
-
                 # --- NEW STREAMING API CALL ---
                 # We collect all chunks from Mistral into this variable
                 full_content = ""
@@ -310,120 +189,14 @@ async def run_tech_lead(client, model, console, working_dir):
                         tc_args_string = tool_call["arguments"]
                         tc_id = tool_call["id"]
                         
-                        try:
-                            args = json.loads(tc_args_string)
-                        except json.JSONDecodeError:
-                            manager_messages.append({
-                                "role": "tool",
-                                "name": tc_name,
-                                "content": f"SYSTEM ERROR: Failed to parse tool arguments as JSON: {tc_args_string}",
-                                "tool_call_id": tc_id 
-                            })
-                            continue
-                        
-                        # --- PLAN UPDATING ---
-                        if tc_name == "update_project_plan":
-                            
-                            try:
-                                current_state = json.loads(get_project_state(working_dir))
-                            except Exception:
-                                current_state = {
-                                    "status": "in_progress",
-                                    "completed_milestones": [],
-                                    "current_milestone": None
-                                }
-                            
-                            # Update the goal and pending milestones
-                            current_state["project_goal"] = args.get("project_goal", current_state.get("project_goal"))
-                            current_state["pending_milestones"] = args.get("milestones", [])
-                            if "status" not in current_state:
-                                current_state["status"] = "in_progress"
-                            if "completed_milestones" not in current_state:
-                                current_state["completed_milestones"] = []
-                            
-                            console.print("\n[dim cyan] Tech Lead is updating the project plan...[/dim cyan]")
-                            update_project_state(working_dir, current_state)
-                            
-                            manager_messages.append({
-                                "role": "tool",
-                                "name": tc_name,
-                                "content": "Plan successfully updated. You may now proceed.",
-                                "tool_call_id": tc_id 
-                            })
-                            
-                            # Automatically display status tracker
-                            try:
-                                status_markdown = f"**Goal:** {current_state.get('project_goal', 'Not set')}\n\n"
-                                status_markdown += f"**Status:** {current_state.get('status', 'Not started').upper()} | **Current:** {current_state.get('current_milestone', 'None')}\n\n**Completed:**\n"
-                                for m in current_state.get("completed_milestones", []):
-                                    status_markdown += f"- {m}\n"
-                                if not current_state.get("completed_milestones"):
-                                    status_markdown += "- *None yet*\n"
-                                    
-                                status_markdown += "\n**Pending:**\n"
-                                for m in current_state.get("pending_milestones", []):
-                                    status_markdown += f"- {m}\n"
-                                if not current_state.get("pending_milestones"):
-                                    status_markdown += "- *None*\n"
-                                    
-                                console.print("\n")
-                                console.print(Panel(Markdown(status_markdown), title="[bold blue]🚀 Project Tracker[/bold blue]", border_style="blue", expand=False))
-                                console.print("\n")
-                            except Exception as e:
-                                console.print(f"[bold red]Could not display project tracker: {e}[/bold red]")
-
-                        # --- DELEGATION LOGIC ---
-                        elif tc_name == "delegate_to_worker":
-                            target_milestone = args.get("target_milestone")
-                            task = args.get("task_description")
-                            
-                            # 1. Update state to show what is currently happening
-                            current_state = json.loads(get_project_state(working_dir))
-                            current_state["current_milestone"] = target_milestone
-                            update_project_state(working_dir, current_state)
-
-                            # 2. Run the Worker
-                            worker_report = await run_worker_agent(client, model, console, task, working_dir, auto_mode)
-
-                            # 3. DETERMINISTIC STATE UPDATE (The Worker Finished!)
-                            current_state = json.loads(get_project_state(working_dir))
-                            
-                            if target_milestone in current_state["pending_milestones"]:
-                                current_state["pending_milestones"].remove(target_milestone)
-                            
-                            if target_milestone not in current_state["completed_milestones"]:
-                                current_state["completed_milestones"].append(target_milestone)
-                                
-                            current_state["current_milestone"] = None
-                            
-                            # Save the truth to disk
-                            update_project_state(working_dir, current_state)
-
-                            # 4. Give the report back to the Manager
-                            manager_messages.append({
-                                "role": "tool",
-                                "name": "delegate_to_worker",
-                                "content": f"WORKER REPORT:\n{worker_report}\n\nSYSTEM: Milestone '{target_milestone}' has been automatically marked as complete in the tracker.",
-                                "tool_call_id": tc_id 
-                            })
-
-                        elif tc_name == "get_file_content":
-                            file_path = args.get("file_path")
-
-                            # --- Clean spinner for Tech Lead ---
-                            with console.status(f"[bold cyan]Tech Lead reading '{file_path}'...[/bold cyan]", spinner="dots"):
-                                result = get_file_content(working_dir, file_path)
-                                console.print(f"[bold green]✓[/bold green] [dim]Tech Lead analyzed: {file_path}[/dim]")
-                            
-                            # Feed the file content back to the Manager
-                            manager_messages.append({
-                                "role": "tool",
-                                "name": "get_file_content",
-                                "content": str(result),
-                                "tool_call_id": tc_id 
-                            })
+                        # Execute the tool and get the resulting message dictionary using our helper
+                        msg_to_append = await execute_manager_tool(
+                            tc_name, tc_args_string, tc_id, 
+                            working_dir, console, client, model, auto_mode
+                        )
+                        manager_messages.append(msg_to_append)
                     
-                    # Continue the loop!
+                    # Continue the loop to allow chaining tasks!
                     continue 
 
                 else:

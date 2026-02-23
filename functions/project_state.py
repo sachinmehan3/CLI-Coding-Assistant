@@ -25,6 +25,6 @@ def update_project_state(working_directory: str, state_data: dict):
         # Format with indent=4 so it's readable if a human opens the file
         with open(state_path, "w", encoding="utf-8") as f:
             json.dump(state_data, f, indent=4)
-        return "✅ Successfully saved project_state.json."
+        return " Successfully saved project_state.json."
     except Exception as e:
-        return f"❌ Failed to save project state: {e}"
+        return f" Failed to save project state: {e}"
