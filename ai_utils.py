@@ -10,7 +10,7 @@ RETRY_EXCEPTIONS = (SDKError,)
     stop=stop_after_attempt(3), 
     wait=wait_exponential(multiplier=1, min=2, max=10), 
     retry=retry_if_exception_type(RETRY_EXCEPTIONS),
-    before_sleep=lambda retry_state: print(f"[dim yellow]   ⚠️ API hiccup. Retrying (attempt {retry_state.attempt_number})...[/dim yellow]")
+    before_sleep=lambda retry_state: print(f"[dim yellow]API hiccup. Retrying (attempt {retry_state.attempt_number})...[/dim yellow]")
 )
 def safe_mistral_stream(client, model, messages, tools=None):
     """A bulletproof wrapper for Mistral streaming calls."""
@@ -24,7 +24,7 @@ def safe_mistral_stream(client, model, messages, tools=None):
     stop=stop_after_attempt(3), 
     wait=wait_exponential(multiplier=1, min=2, max=10), 
     retry=retry_if_exception_type(RETRY_EXCEPTIONS),
-    before_sleep=lambda retry_state: print(f"[dim yellow]   ⚠️ API hiccup. Retrying (attempt {retry_state.attempt_number})...[/dim yellow]")
+    before_sleep=lambda retry_state: print(f"[dim yellow]API hiccup. Retrying (attempt {retry_state.attempt_number})...[/dim yellow]")
 )
 async def safe_mistral_stream_async(client, model, messages, tools=None):
     """A bulletproof wrapper for Mistral async streaming calls."""
@@ -38,7 +38,7 @@ async def safe_mistral_stream_async(client, model, messages, tools=None):
     stop=stop_after_attempt(3), 
     wait=wait_exponential(multiplier=1, min=2, max=10), 
     retry=retry_if_exception_type(RETRY_EXCEPTIONS),
-    before_sleep=lambda retry_state: print(f"[dim yellow]   ⚠️ API hiccup. Retrying (attempt {retry_state.attempt_number})...[/dim yellow]")
+    before_sleep=lambda retry_state: print(f"[dim yellow]API hiccup. Retrying (attempt {retry_state.attempt_number})...[/dim yellow]")
 )
 async def safe_mistral_complete_async(client, model, messages, tools=None):
     """A bulletproof wrapper for Mistral async complete calls."""
