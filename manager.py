@@ -122,7 +122,7 @@ async def run_tech_lead(client, model, console, working_dir):
     # Main infinite loop to keep the console chat session alive
     while True:
         try:
-            user_input = await asyncio.to_thread(console.input, "\n[bold blue]You (to Tech Lead) > [/bold blue]")
+            user_input = await asyncio.to_thread(console.input, "\n[bold blue]You > [/bold blue]")
             if user_input.lower() in ["exit", "quit"]:
                 break
             
@@ -160,7 +160,7 @@ async def run_tech_lead(client, model, console, working_dir):
                         status_markdown += "- *None*\n"
                         
                     console.print("\n")
-                    console.print(Panel(Markdown(status_markdown), title="[bold blue]🚀 Project Tracker[/bold blue]", border_style="blue", expand=False))
+                    console.print(Panel(Markdown(status_markdown), title="[bold blue] Project Tracker[/bold blue]", border_style="blue", expand=False))
                     console.print("\n")
                 except Exception as e:
                     console.print(f"[bold red]Could not read project tracker: {e}[/bold red]")
