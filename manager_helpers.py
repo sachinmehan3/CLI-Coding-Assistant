@@ -161,7 +161,7 @@ async def execute_manager_tool(tc_name, tc_args_string, tc_id, working_dir, cons
         # --- Clean spinner for Tech Lead ---
         with console.status(f"[bold cyan]Tech Lead reading '{file_path}'...[/bold cyan]", spinner="dots"):
             result = get_file_content(working_dir, file_path)
-            console.print(f"[bold green]✓[/bold green] [dim]Tech Lead analyzed: {file_path}[/dim]")
+            console.print(f"[dim]Tech Lead analyzed: {file_path}[/dim]")
         
         return {
             "role": "tool",

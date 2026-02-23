@@ -68,23 +68,23 @@ async def execute_tool(function_name, args, working_dir, auto_mode, console):
         with console.status(f"[bold cyan]Worker executing {function_name}...[/bold cyan]", spinner="dots"):
             if function_name == "get_files_info":
                 function_result = await asyncio.to_thread(get_file_info, working_dir, args.get("directory", "."))
-                console.print(f"[bold green]\u2713[/bold green] [dim]Checked directory tree[/dim]")
+                console.print(f"[dim]Checked directory tree[/dim]")
                 
             elif function_name == "get_file_content":
                 function_result = await asyncio.to_thread(get_file_content, working_dir, args.get("file_path"))
-                console.print(f"[bold green]\u2713[/bold green] [dim]Read file: {args.get('file_path')}[/dim]")
+                console.print(f"[dim]Read file: {args.get('file_path')}[/dim]")
                 
             elif function_name == "create_directory":
                 function_result = await asyncio.to_thread(create_directory, working_dir, args.get("directory_path"))
-                console.print(f"[bold green]\u2713[/bold green] [dim]Created directory: {args.get('directory_path')}[/dim]")
+                console.print(f"[dim]Created directory: {args.get('directory_path')}[/dim]")
                 
             elif function_name == "web_search":
                 function_result = await asyncio.to_thread(web_search, args.get("query"))
-                console.print(f"[bold green]\u2713[/bold green] [dim]Searched web for: {args.get('query')}[/dim]")
+                console.print(f"[dim]Searched web for: {args.get('query')}[/dim]")
                 
             elif function_name == "run_linter":
                 function_result = await asyncio.to_thread(run_linter, working_dir, args.get("file_path"))
-                console.print(f"[bold green]\u2713[/bold green] [dim]Linted file: {args.get('file_path')}[/dim]")
+                console.print(f"[dim]Linted file: {args.get('file_path')}[/dim]")
 
     # --- Auto-Bypass Logic for Destructive/Execution Tools ---
     elif function_name == "write_file":
@@ -93,7 +93,7 @@ async def execute_tool(function_name, args, working_dir, auto_mode, console):
         
         approval = 'y' if auto_mode else ''
         if auto_mode:
-            console.print(f"[dim yellow]\u26a1 Auto-approving write to '{file_path}'[/dim yellow]")
+            console.print(f"[dim yellow] Auto-approving write to '{file_path}'[/dim yellow]")
         else:
             console.print(f"\n[bold red] WARNING: Worker wants to WRITE/OVERWRITE '{file_path}'.[/bold red]")
             while approval.strip().lower() not in ['y', 'yes', 'n', 'no']:
@@ -102,7 +102,7 @@ async def execute_tool(function_name, args, working_dir, auto_mode, console):
         with console.status(f"[bold cyan]Writing {file_path}...[/bold cyan]", spinner="dots"):
             if approval.strip().lower() in ['y', 'yes']:
                 function_result = await asyncio.to_thread(write_file, working_dir, file_path, content)
-                console.print(f"[bold green]\u2713[/bold green] [dim]Wrote file: {file_path}[/dim]")
+                console.print(f"[dim]Wrote file: {file_path}[/dim]")
             else:
                 function_result = "SYSTEM ERROR: User denied permission to write file." 
 
@@ -113,7 +113,7 @@ async def execute_tool(function_name, args, working_dir, auto_mode, console):
         
         approval = 'y' if auto_mode else ''
         if auto_mode:
-            console.print(f"[dim yellow]\u26a1 Auto-approving edit to '{file_path}'[/dim yellow]")
+            console.print(f"Auto-approving edit to '{file_path}'[/dim yellow]")
         else:
             console.print(f"\n[bold red] WARNING: Worker wants to EDIT '{file_path}'.[/bold red]")
             while approval.strip().lower() not in ['y', 'yes', 'n', 'no']:
@@ -122,7 +122,7 @@ async def execute_tool(function_name, args, working_dir, auto_mode, console):
         with console.status(f"[bold cyan]Editing {file_path}...[/bold cyan]", spinner="dots"):
             if approval.strip().lower() in ['y', 'yes']:
                 function_result = await asyncio.to_thread(edit_file, working_dir, file_path, search_str, replace_str)
-                console.print(f"[bold green]\u2713[/bold green] [dim]Edited file: {file_path}[/dim]")
+                console.print(f"[dim]Edited file: {file_path}[/dim]")
             else:
                 function_result = "SYSTEM ERROR: User denied permission to edit file."
 
@@ -132,7 +132,7 @@ async def execute_tool(function_name, args, working_dir, auto_mode, console):
         
         approval = 'y' if auto_mode else ''
         if auto_mode:
-            console.print(f"[dim yellow]\u26a1 Auto-approving execution of '{file_path}'[/dim yellow]")
+            console.print(f"[dim yellow] Auto-approving execution of '{file_path}'[/dim yellow]")
         else:
             console.print(f"\n[bold red] WARNING: Worker wants to EXECUTE '{file_path}'.[/bold red]")
             while approval.strip().lower() not in ['y', 'yes', 'n', 'no']:
@@ -141,7 +141,7 @@ async def execute_tool(function_name, args, working_dir, auto_mode, console):
         with console.status(f"[bold cyan]Executing {file_path}...[/bold cyan]", spinner="dots"):
             if approval.strip().lower() in ['y', 'yes']:
                 function_result = await asyncio.to_thread(run_python_file, working_dir, file_path, script_args)
-                console.print(f"[bold green]\u2713[/bold green] [dim]Executed: {file_path}[/dim]")
+                console.print(f"[dim]Executed: {file_path}[/dim]")
             else:
                 function_result = f"SYSTEM ERROR: User denied permission."
     
@@ -150,7 +150,7 @@ async def execute_tool(function_name, args, working_dir, auto_mode, console):
         
         approval = 'y' if auto_mode else ''
         if auto_mode:
-            console.print(f"[dim yellow]\u26a1 Auto-approving install of '{package_name}'[/dim yellow]")
+            console.print(f"Auto-approving install of '{package_name}'[/dim yellow]")
         else:
             console.print(f"\n[bold red] WARNING: Worker wants to INSTALL PACKAGE: '{package_name}'.[/bold red]")
             while approval.strip().lower() not in ['y', 'yes', 'n', 'no']:
@@ -159,7 +159,7 @@ async def execute_tool(function_name, args, working_dir, auto_mode, console):
         with console.status(f"[bold cyan]Installing {package_name}...[/bold cyan]", spinner="dots"):
             if approval.strip().lower() in ['y', 'yes']:
                 function_result = await asyncio.to_thread(install_package, working_dir, package_name)
-                console.print(f"[bold green]\u2713[/bold green] [dim]Installed: {package_name}[/dim]")
+                console.print(f"[dim]Installed: {package_name}[/dim]")
             else:
                 function_result = f"SYSTEM ERROR: User denied permission."
 
