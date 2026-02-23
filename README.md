@@ -47,11 +47,15 @@ coder-agent/
 ├──  main.py               # Application entry point
 ├──  manager.py            # The Tech Lead Agent loop and tools
 ├──  worker.py             # The Developer Agent loop and tools
+├──  worker_tools.py       # Developer Agent tool definitions
+├──  worker_helpers.py     # Developer Agent logic helpers
+├──  ai_utils.py           # Resilient async wrappers for Mistral API calls
 ├──  memory.py             # Conversation summarization logic to prevent context bloat
 ├──  config.py             # Global configurations (e.g., character limits)
 │
 ├── functions/            # Core agent capabilities (Tools)
 │   ├── create_directory.py
+│   ├── edit_file.py
 │   ├── get_file_content.py
 │   ├── get_files_info.py
 │   ├── install_package.py

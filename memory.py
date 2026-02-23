@@ -3,7 +3,7 @@ from ai_utils import safe_mistral_complete_async
 async def summarize_manager_history(client, model, messages_to_summarize):
     """
     Uses Mistral to compress older conversation history into a dense summary.
-    This prevents the AI context window from getting too large and crashing.
+    This prevents the AI context window (of Tech Lead) from getting too large and crashing.
     """
     conversation_text = ""
     # Loop through each message to build a readable string format of the history

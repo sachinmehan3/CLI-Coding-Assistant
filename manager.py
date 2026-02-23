@@ -372,7 +372,7 @@ async def run_tech_lead(client, model, console, working_dir):
                             except Exception as e:
                                 console.print(f"[bold red]Could not display project tracker: {e}[/bold red]")
 
-                        # --- UPDATED DELEGATION LOGIC ---
+                        # --- DELEGATION LOGIC ---
                         elif tc_name == "delegate_to_worker":
                             target_milestone = args.get("target_milestone")
                             task = args.get("task_description")
@@ -410,7 +410,7 @@ async def run_tech_lead(client, model, console, working_dir):
                         elif tc_name == "get_file_content":
                             file_path = args.get("file_path")
 
-                            # --- NEW: Clean spinner for Tech Lead ---
+                            # --- Clean spinner for Tech Lead ---
                             with console.status(f"[bold cyan]Tech Lead reading '{file_path}'...[/bold cyan]", spinner="dots"):
                                 result = get_file_content(working_dir, file_path)
                                 console.print(f"[bold green]✓[/bold green] [dim]Tech Lead analyzed: {file_path}[/dim]")
@@ -423,7 +423,7 @@ async def run_tech_lead(client, model, console, working_dir):
                                 "tool_call_id": tc_id 
                             })
                     
-                    # CRITICAL FIX: Continue the loop!
+                    # Continue the loop!
                     continue 
 
                 else:
