@@ -132,7 +132,7 @@ async def run_tech_lead(client, model, console, working_dir):
             if cmd == "/auto":
                 auto_mode = not auto_mode
                 status_text = "ON (No prompts, high speed)" if auto_mode else "OFF (Safe mode, prompts enabled)"
-                console.print(f"\n[bold magenta]🚀 Auto Mode is now {status_text}[/bold magenta]")
+                console.print(f"\n[bold magenta] Auto Mode is now {status_text}[/bold magenta]")
                 continue # Skip sending this to Mistral
                 
             elif cmd == "/clear":
@@ -149,13 +149,13 @@ async def run_tech_lead(client, model, console, working_dir):
                     
                     status_markdown = f"**Goal:** {goal}\n\n**Status:** {status.upper()} | **Current:** {curr}\n\n**Completed:**\n"
                     for m in current_state.get("completed_milestones", []):
-                        status_markdown += f"- ✅ {m}\n"
+                        status_markdown += f"- {m}\n"
                     if not current_state.get("completed_milestones"):
                         status_markdown += "- *None yet*\n"
                         
                     status_markdown += "\n**Pending:**\n"
                     for m in current_state.get("pending_milestones", []):
-                        status_markdown += f"- ⏳ {m}\n"
+                        status_markdown += f"- {m}\n"
                     if not current_state.get("pending_milestones"):
                         status_markdown += "- *None*\n"
                         
@@ -187,7 +187,7 @@ async def run_tech_lead(client, model, console, working_dir):
                 total_manager_length = sum(get_msg_length(m) for m in manager_messages)
 
                 if total_manager_length > MAX_MANAGER_CHARS:
-                    console.print(f"\n[dim yellow]🧠 Tech Lead memory reached {total_manager_length} chars. Summarizing older tasks...[/dim yellow]")
+                    console.print(f"\n[dim yellow] Tech Lead memory reached {total_manager_length} chars. Summarizing older tasks...[/dim yellow]")
                     
                     system_prompt = manager_messages[0]
                     
@@ -237,7 +237,7 @@ async def run_tech_lead(client, model, console, working_dir):
                 # Mistral breaks tool calls up into tiny stream chunks too. We accumulate them here to parse later.
                 stitched_tools = {}
 
-                console.print("\n[dim cyan]🧠 Tech Lead is thinking...[/dim cyan]")
+                console.print("\n[dim cyan] Tech Lead is thinking...[/dim cyan]")
                 
                 # Open the Live render context
                 with Live(Markdown(""), console=console, refresh_per_second=15, vertical_overflow="visible") as live:
@@ -341,7 +341,7 @@ async def run_tech_lead(client, model, console, working_dir):
                             if "completed_milestones" not in current_state:
                                 current_state["completed_milestones"] = []
                             
-                            console.print("\n[dim cyan]📝 Tech Lead is updating the project plan...[/dim cyan]")
+                            console.print("\n[dim cyan] Tech Lead is updating the project plan...[/dim cyan]")
                             update_project_state(working_dir, current_state)
                             
                             manager_messages.append({
@@ -356,13 +356,13 @@ async def run_tech_lead(client, model, console, working_dir):
                                 status_markdown = f"**Goal:** {current_state.get('project_goal', 'Not set')}\n\n"
                                 status_markdown += f"**Status:** {current_state.get('status', 'Not started').upper()} | **Current:** {current_state.get('current_milestone', 'None')}\n\n**Completed:**\n"
                                 for m in current_state.get("completed_milestones", []):
-                                    status_markdown += f"- ✅ {m}\n"
+                                    status_markdown += f"- {m}\n"
                                 if not current_state.get("completed_milestones"):
                                     status_markdown += "- *None yet*\n"
                                     
                                 status_markdown += "\n**Pending:**\n"
                                 for m in current_state.get("pending_milestones", []):
-                                    status_markdown += f"- ⏳ {m}\n"
+                                    status_markdown += f"- {m}\n"
                                 if not current_state.get("pending_milestones"):
                                     status_markdown += "- *None*\n"
                                     
