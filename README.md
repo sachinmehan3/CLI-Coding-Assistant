@@ -9,11 +9,7 @@ An autonomous, multi-agent programming framework powered by **Mistral AI**. This
 
 ## Demo
 <!-- Add your demo video link here, e.g. YouTube or mp4 URL -->
-[Watch the Demo Video](https://github.com/user-attachments/assets/bb34bc14-28a1-4f5d-969c-51513674e6fe)
-
-
-
-
+[Watch the Demo Video](https://github.com/user-attachments/assets/8bae0486-4366-491f-98e6-e08766f5c7a2)
 
 ---
 
