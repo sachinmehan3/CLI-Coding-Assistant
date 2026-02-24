@@ -118,23 +118,9 @@ While talking to the Assistant, you can use the following quick commands:
 *   `/toggle_auto`: Toggles Auto Mode. When ON, the worker will automatically write and execute files without asking for standard `(y/n)` confirmations.
 *   `/clear`: Clears the terminal screen.
 
----
-
-## How It Works (The Loop)
-
-1.  **You** chat with the **Tech Lead**, describing what you want built.
-2.  The **Tech Lead** explores the codebase, creates a step-by-step milestone plan, and saves it.
-3.  The **Tech Lead** delegates the first milestone to the **Developer**.
-4.  The **Developer** loops continuously:
-    *   Scanning directories.
-    *   Writing code.
-    *   Compiling and fixing syntax errors.
-    *   Executing code and fixing tracebacks.
-    *   Installing packages if hit with `ModuleNotFoundError`.
-5.  Once the feature works perfectly, the **Developer** reports back to the **Tech Lead**.
-6.  The **Tech Lead** marks the milestone as complete and immediately delegates the next one, repeating until the project is finished!
 
 ---
+## Memory Management
 
 ### For the Tech Lead (Planner)
 *   **Milestone-Driven Context**: The Planner doesn't need to know every line of code written. Its memory is focused on high-level planning and the current milestone.
