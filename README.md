@@ -130,5 +130,14 @@ While talking to the Assistant, you can use the following quick commands:
 
 ---
 
+## Future Additions
+
+*   **Docker Containerization**: Isolate the agent's environment and workspace for enhanced security, reproducibility, and easier deployment.
+*   **Streaming & Async**: Implement asynchronous operations and streamed responses for a faster, more responsive terminal experience while the agent generates code and plans.
+*   **Intelligent File Editing Tool**: Provide the LLM with a dedicated tool to apply diffs or targeted edits to existing files, rather than overwriting entire files for small bug fixes (showing diff changes).
+*   **Support for Multiple LLM Providers**: Expand compatibility beyond Mistral AI to allow users to bring their own API keys for OpenAI, Anthropic, Google Gemini, or local models via Ollama.
+
+---
+
 ## 🛡️ License
 This project is open-source and available under the MIT License.
