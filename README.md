@@ -1,6 +1,6 @@
 # CLI Coding Assistant
 
-An autonomous, multi-agent programming framework powered by **Mistral AI**. This project creates a virtual software development agency right in your terminal, consisting of a **Tech Lead** (Manager) who plans and delegates, and a **Developer** (Worker) who writes, tests, and refines the code.
+An autonomous, multi-agent programming framework powered by **Mistral AI**. This project orchestrates a dual-agent system directly in your terminal, consisting of a **Planner** agent that analyzes requirements and delegates tasks, and a **Worker** agent that autonomously writes, tests, and refines the code.
 
 ![Python Version](https://img.shields.io/badge/python-3.x-blue.svg)
 ![Mistral AI](https://img.shields.io/badge/Powered%20By-Mistral%20AI-orange.svg)
