@@ -1,5 +1,7 @@
 import os
-from config import MAX_CHARS
+
+# Maximum characters allowed for certain string operations to prevent memory issues
+MAX_CHARS = 10000
 
 def get_file_content(working_directory, file_path):
     abs_working_directory = os.path.abspath(working_directory)

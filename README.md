@@ -20,12 +20,12 @@ An autonomous, multi-agent programming framework powered by **Mistral AI**. This
 ## Key Features
 
 *   **Two-Agent Architecture**: 
-    *   **Manager (Tech Lead)**: Translates your requests into actionable milestones, updates the project tracker, and orchestrates the Worker.
+    *   **Planner (Tech Lead)**: Translates your requests into actionable milestones, updates the project tracker, and orchestrates the Worker.
     *   **Worker (Developer)**: A headless agent that reads/writes files, creates directories, installs packages, runs linters, and executes Python code iteratively until it passes.
 *   **Intelligent Project Tracking**: Maintains a persistent `project_state.json` to track completed, current, and pending milestones.
 *   **Robust Autonomous Tooling**: 
     *   **Fast Package Management**: Uses `uv` to automatically install missing dependencies on the fly.
-    *   **Self-Healing Code**: Automatically runs `ruff` (for linting) and standard Python syntax checks before execution.
+    *   **Self-Healing Code**: Automatically runs `py_compile` (for syntax checking) and standard Python execution checks before completing tasks.
     *   **Web Search Integration**: Uses `duckduckgo-search` to find up-to-date documentation when stuck.
 *   **Multi-Tiered Safety Mode**: Run in interactive mode (where the AI asks permission before writing or executing code) or toggle `/auto` mode for blazing fast, hands-off execution.
 *   **Beautiful Terminal UI**: Uses the `rich` library for live-streaming markdown, smooth spinners, and color-coded status tracking.
@@ -45,15 +45,14 @@ An autonomous, multi-agent programming framework powered by **Mistral AI**. This
 coder-agent/
 │
 ├──  main.py               # Application entry point
-├──  manager.py            # The Tech Lead Agent loop and tools
-├──  manager_tools.py      # Tech Lead Agent tool definitions
-├──  manager_helpers.py    # Tech Lead Agent logic helpers
+├──  planner.py            # The Tech Lead Agent loop and tools
+├──  planner_tools.py      # Tech Lead Agent tool definitions
+├──  planner_helpers.py    # Tech Lead Agent logic helpers
 ├──  worker.py             # The Developer Agent loop and tools
 ├──  worker_tools.py       # Developer Agent tool definitions
 ├──  worker_helpers.py     # Developer Agent logic helpers
 ├──  ai_utils.py           # Resilient async wrappers for Mistral API calls
 ├──  memory.py             # Conversation summarization logic to prevent context bloat
-├──  config.py             # Global configurations (e.g., character limits)
 │
 ├── functions/            # Core agent capabilities (Tools)
 │   ├── create_directory.py
@@ -62,7 +61,7 @@ coder-agent/
 │   ├── get_files_info.py
 │   ├── install_package.py
 │   ├── project_state.py
-│   ├── run_linter.py
+│   ├── run_compiler.py
 │   ├── run_python_file.py
 │   ├── web_search.py
 │   └── write_file.py
@@ -79,7 +78,6 @@ coder-agent/
 1.  **Python 3.x** installed.
 2.  **Mistral API Key**. Get one from [Mistral AI](https://mistral.ai/).
 3.  **uv** (Optional but highly recommended for the agent's package installation tool).
-4.  **ruff** (Optional but recommended for advanced linting).
 
 ### Installation
 
@@ -113,8 +111,10 @@ python main.py --dir my_new_project
 
 While talking to the Tech Lead, you can use the following quick commands:
 
-*   `/status` or `/plan`: Displays the beautiful UI card showing current project goals, completed milestones, and pending tasks.
-*   `/auto`: Toggles Auto Mode. When ON, the worker will automatically write and execute files without asking for standard `(y/n)` confirmations.
+*   `/status`: Displays the beautiful UI card showing current project goals, completed milestones, and pending tasks.
+*   `/plan`: Switches to Plan Mode. The Tech Lead (Planner) takes over to coordinate and assign tasks.
+*   `/quick`: Switches to Quick Mode. Speak directly to the Developer (Worker) for one-shot tasks without milestone tracking.
+*   `/toggle_auto`: Toggles Auto Mode. When ON, the worker will automatically write and execute files without asking for standard `(y/n)` confirmations.
 *   `/clear`: Clears the terminal screen.
 
 ---
@@ -127,7 +127,7 @@ While talking to the Tech Lead, you can use the following quick commands:
 4.  The **Developer** loops continuously:
     *   Scanning directories.
     *   Writing code.
-    *   Linting and fixing syntax errors.
+    *   Compiling and fixing syntax errors.
     *   Executing code and fixing tracebacks.
     *   Installing packages if hit with `ModuleNotFoundError`.
 5.  Once the feature works perfectly, the **Developer** reports back to the **Tech Lead**.
@@ -135,14 +135,14 @@ While talking to the Tech Lead, you can use the following quick commands:
 
 ---
 
-### For the Tech Lead (Manager)
-*   **Milestone-Driven Context**: The Manager doesn't need to know every line of code written. Its memory is focused on high-level planning and the current milestone.
-*   **Active Summarization**: The `memory.py` module actively monitors the length of the Manager's context. When the history becomes too long, the system compresses older conversations into a dense summary, preserving key decisions and context without the bloat.
-*   **State Tracking**: By relying on the persistent `project_state.json` file, the Manager maintains an accurate absolute truth of the overall goal and next steps, even after its chat history is summarized.
+### For the Tech Lead (Planner)
+*   **Milestone-Driven Context**: The Planner doesn't need to know every line of code written. Its memory is focused on high-level planning and the current milestone.
+*   **Active Summarization**: The `memory.py` module actively monitors the length of the Planner's context. When the history becomes too long, the system compresses older conversations into a dense summary, preserving key decisions and context without the bloat.
+*   **State Tracking**: By relying on the persistent `project_state.json` file, the Planner maintains an accurate absolute truth of the overall goal and next steps, even after its chat history is summarized.
 
 ### For the Developer (Worker)
 *   **Sliding Window Conservation**: The Worker actively tracking the character length of its coding iterations. When the context exceeds a safe limit, older steps (like early failed linting or execution attempts) are systematically truncated to protect the context window.
-*   **Context & Tool Call Preservation**: During truncation, the Worker anchors the core instructions and the Manager's initial task objective. It perfectly preserves the most recent tool calls and execution results, ensuring it never loses its vital short-term memory of the exact code or error it is currently fixing.
+*   **Context & Tool Call Preservation**: During truncation, the Worker anchors the core instructions and the Planner's initial task objective. It perfectly preserves the most recent tool calls and execution results, ensuring it never loses its vital short-term memory of the exact code or error it is currently fixing.
 *   **Truncation Safeguards**: Reading large files or executing scripts that dump massive amounts of logs to the terminal are automatically truncated. This prevents a single errant print statement from instantly blowing up the context window.
 
 ---

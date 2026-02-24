@@ -64,33 +64,32 @@ WORKER_TOOLS = [
             }
         }
     },
+
     {
         "type": "function",
         "function": {
-            "name": "edit_file",
-            "description": "Edits an existing file by replacing a specific search string with a new replace string. Use this to modify files without rewriting them completely.",
+            "name": "delete_file",
+            "description": "Deletes a specific existing file. Use this to clean up unnecessary files or when restructuring.",
             "parameters": {
                 "type": "object",
                 "properties": {
-                    "file_path": {"type": "string", "description": "The EXACT path to the file to edit."},
-                    "search": {"type": "string", "description": "The exact string to search for and replace. Must match the file contents PERFECTLY, including whitespace and indentation."},
-                    "replace": {"type": "string", "description": "The new string that will replace the search string."}
+                    "file_path": {"type": "string", "description": "The exact relative path of the file to delete."}
                 },
-                "required": ["file_path", "search", "replace"]
+                "required": ["file_path"]
             }
         }
     },
     {
         "type": "function",
         "function": {
-            "name": "run_linter",
-            "description": "Runs a linter on a Python file to check for syntax errors, undefined variables, and bad imports WITHOUT executing the code. Always use this to check your work before using run_python_file.",
+            "name": "run_compiler",
+            "description": "Compiles a Python file (using py_compile) to check for syntax errors WITHOUT executing the code. Always use this to check your work before using run_python_file.",
             "parameters": {
                 "type": "object",
                 "properties": {
                     "file_path": {
                         "type": "string",
-                        "description": "The exact relative path to the Python file to lint."
+                        "description": "The exact relative path to the Python file to compile."
                     }
                 },
                 "required": ["file_path"]
@@ -101,7 +100,7 @@ WORKER_TOOLS = [
         "type": "function",
         "function": {
             "name": "run_python_file",
-            "description": "Executes a Python script and returns the console output (STDOUT and STDERR).",
+            "description": "Executes a Python script and returns the console output (STDOUT and STDERR). CAUTION: NEVER execute GUI applications or blocking servers. If the script contains a GUI (e.g. tkinter, PyQt), test it strictly by using the run_linter tool instead of running it.",
             "parameters": {
                 "type": "object",
                 "properties": {
