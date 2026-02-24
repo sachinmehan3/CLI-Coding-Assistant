@@ -101,7 +101,7 @@ coder-agent/
 
 ## Usage
 
-Start the agency by running `main.py`. You can optionally specify a target directory for the agency to work inside (defaults to `workspace`).
+Start by running `main.py`. You can optionally specify a target directory to work inside (defaults to `workspace`).
 
 ```bash
 python main.py --dir my_new_project

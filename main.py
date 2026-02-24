@@ -37,7 +37,7 @@ def main():
     
     console.print(f"[bold green] Workspace set to: {working_dir}[/bold green]")
 
-    # --- Agency State ---
+    # --- State ---
     # mode can be "plan" (default) or "quick"
     current_mode = "plan"
     auto_mode = True
@@ -45,7 +45,7 @@ def main():
     # Initialize the Planner's memory since it might converse over multiple turns
     planner_messages = get_initial_planner_messages()
 
-    console.print("[yellow]Starting the Coding Assistant Agency...[/yellow]")
+    console.print("[yellow]Starting...[/yellow]")
     console.print("[dim]Type '/quick' to speak directly to the Coding Assistant, or '/plan' to let the Planner manage tasks.[/dim]")
     console.print("[dim]Type '/toggle_auto' to turn off automatic executions.[/dim]")
 
@@ -82,12 +82,12 @@ def main():
             # --- Mode Switching Commands ---
             elif cmd == "/plan":
                 current_mode = "plan"
-                console.print("\n[bold green]Switched to PLAN mode. The Planner will coordinate tasks.[/bold green]")
+                console.print("\n[bold green]Switched to PLAN mode.[/bold green]")
                 continue
                 
             elif cmd == "/quick":
                 current_mode = "quick"
-                console.print("\n[bold green]Switched to QUICK mode. Speaking directly to the Coding Assistant.[/bold green]")
+                console.print("\n[bold green]Switched to QUICK mode.[/bold green]")
                 continue
             
             # Skip empty inputs
@@ -114,7 +114,7 @@ def main():
                     console.print("\n")
                     console.print(Panel(
                         Markdown(summary), 
-                        title="[bold green]Coding Assistant Summary[/bold green]", 
+                        title="[bold green]Summary[/bold green]", 
                         border_style="green"
                     ))
 

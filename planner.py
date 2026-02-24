@@ -42,7 +42,7 @@ PLANNER_BASE_PROMPT = (
     "OPERATIONAL RULES:\n"
     "1. TWO-STAGE PROCESS: You operate in two distinct stages.\n"
     "   - STAGE 1 (Planning): Discuss the user's request, outline all features, architectures, and fixes. Do NOT delegate yet. Once the user agrees, use `update_project_plan` to lock in the agreed features.\n"
-    "   - STAGE 2 (Delegation): Give a SINGLE, massive, highly detailed prompt to the Worker mapping out ALL specifications at once using `delegate_to_worker`. The prompt MUST include the desired directory structure, what directories to create, and what files to create.\n"
+    "   - STAGE 2 (Delegation): Give a SINGLE, highly detailed prompt to the Worker mapping out ALL specifications at once using `delegate_to_worker`. The prompt MUST include the desired directory structure, what directories to create, and what files to create.\n"
     "2. FULL AUTONOMY FOR THE WORKER: Push the worker to complete the entire app in its own loop based on your massive prompt. Do not break it down step-by-step for the worker.\n"
     "3. NO HAND-HOLDING: Do not stop to explain every step to the user mid-execution. Your job is to get it done completely and only return control to the user when the entire project plan is 100% finished.\n"
     "4. REVIEW & FIX: If the monolithic task fails based on the worker's report, fix the prompt and re-delegate immediately.\n"
@@ -97,8 +97,8 @@ def run_planner_step(client, model, console, working_dir, user_input, planner_me
                 f" CURRENT PROJECT TRACKER:\n{current_tracker_json}"
             )
 
-            # --- NEW SYNCHRONOUS API CALL ---
-            with console.status("[bold cyan]Coding Assistant is thinking...[/bold cyan]", spinner="dots"):
+            # --- API CALL ---
+            with console.status("[bold cyan]Thinking...[/bold cyan]", spinner="dots"):
 
                 response = safe_mistral_complete(
                     client=client,

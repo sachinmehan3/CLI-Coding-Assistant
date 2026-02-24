@@ -80,7 +80,7 @@ def run_worker_agent(client, model, console, task_description, working_dir, auto
         messages = trim_memory(messages, MAX_CHARS, console)
 
         # --- SYNCHRONOUS API CALL ---
-        with console.status("[bold cyan]Coding Assistant is thinking...[/bold cyan]", spinner="dots"):
+        with console.status("[bold cyan]Thinking...[/bold cyan]", spinner="dots"):
             response = safe_mistral_complete(
                 client=client,
                 model=model,
