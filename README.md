@@ -110,7 +110,7 @@ python main.py --dir my_new_project
 
 ### Slash Commands
 
-While talking to the Tech Lead, you can use the following quick commands:
+While talking to the Assistant, you can use the following quick commands:
 
 *   `/status`: Displays the beautiful UI card showing current project goals, completed milestones, and pending tasks.
 *   `/plan`: Switches to Plan Mode. The Tech Lead (Planner) takes over to coordinate and assign tasks.
