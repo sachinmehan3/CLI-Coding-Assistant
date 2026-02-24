@@ -1,6 +1,6 @@
 # CLI Coding Assistant
 
-An autonomous, multi-agent programming framework powered by **Mistral AI**. This project creates a virtual software development agency right in your terminal, consisting of a **Tech Lead** (Manager) who plans and delegates, and a **Developer** (Worker) who writes, tests, and refines the code.
+An autonomous, multi-agent programming framework powered by **Mistral AI**. This project orchestrates a dual-agent system directly in your terminal, consisting of a **Planner** agent that analyzes requirements and delegates tasks, and a **Worker** agent that autonomously writes, tests, and refines the code.
 
 ![Python Version](https://img.shields.io/badge/python-3.x-blue.svg)
 ![Mistral AI](https://img.shields.io/badge/Powered%20By-Mistral%20AI-orange.svg)
@@ -9,32 +9,29 @@ An autonomous, multi-agent programming framework powered by **Mistral AI**. This
 
 ## Demo
 <!-- Add your demo video link here, e.g. YouTube or mp4 URL -->
-[Watch the Demo Video](https://github.com/user-attachments/assets/bb34bc14-28a1-4f5d-969c-51513674e6fe)
-
-
-
-
+[Watch the Demo Video](https://github.com/user-attachments/assets/8bae0486-4366-491f-98e6-e08766f5c7a2)
 
 ---
 
 ## Key Features
 
 *   **Two-Agent Architecture**: 
-    *   **Planner (Tech Lead)**: Translates your requests into actionable milestones, updates the project tracker, and orchestrates the Worker.
-    *   **Worker (Developer)**: A headless agent that reads/writes files, creates directories, installs packages, runs linters, and executes Python code iteratively until it passes.
+    *   **Planner**: Translates your requests into actionable milestones, updates the project tracker, and orchestrates the Worker.
+    *   **Worker**: A headless agent that reads/writes files, creates directories, installs packages, and executes Python code iteratively until it passes.
 *   **Intelligent Project Tracking**: Maintains a persistent `project_state.json` to track completed, current, and pending milestones.
 *   **Robust Autonomous Tooling**: 
     *   **Fast Package Management**: Uses `uv` to automatically install missing dependencies on the fly.
     *   **Self-Healing Code**: Automatically runs `py_compile` (for syntax checking) and standard Python execution checks before completing tasks.
     *   **Web Search Integration**: Uses `duckduckgo-search` to find up-to-date documentation when stuck.
 *   **Multi-Tiered Safety Mode**: Run in interactive mode (where the AI asks permission before writing or executing code) or toggle `/auto` mode for blazing fast, hands-off execution.
-*   **Beautiful Terminal UI**: Uses the `rich` library for live-streaming markdown, smooth spinners, and color-coded status tracking.
+*   **Beautiful Terminal UI**: Uses the `rich` library for beautiful markdown rendering in terminal.
 
 ---
 
 ## Architecture
+<img width="2874" height="1720" alt="ArchiNew" src="https://github.com/user-attachments/assets/1028dfad-000b-4bc0-b4b0-f5f312a0ff36" />
 
-<img width="1907" height="1335" alt="Untitled-2026-02-22-1548" src="https://github.com/user-attachments/assets/921f6ff7-f8d1-430a-81f7-aae47ee25981" />
+
 
 ---
 
@@ -109,7 +106,7 @@ python main.py --dir my_new_project
 
 ### Slash Commands
 
-While talking to the Tech Lead, you can use the following quick commands:
+While talking to the Assistant, you can use the following quick commands:
 
 *   `/status`: Displays the beautiful UI card showing current project goals, completed milestones, and pending tasks.
 *   `/plan`: Switches to Plan Mode. The Tech Lead (Planner) takes over to coordinate and assign tasks.
@@ -117,23 +114,9 @@ While talking to the Tech Lead, you can use the following quick commands:
 *   `/toggle_auto`: Toggles Auto Mode. When ON, the worker will automatically write and execute files without asking for standard `(y/n)` confirmations.
 *   `/clear`: Clears the terminal screen.
 
----
-
-## How It Works (The Loop)
-
-1.  **You** chat with the **Tech Lead**, describing what you want built.
-2.  The **Tech Lead** explores the codebase, creates a step-by-step milestone plan, and saves it.
-3.  The **Tech Lead** delegates the first milestone to the **Developer**.
-4.  The **Developer** loops continuously:
-    *   Scanning directories.
-    *   Writing code.
-    *   Compiling and fixing syntax errors.
-    *   Executing code and fixing tracebacks.
-    *   Installing packages if hit with `ModuleNotFoundError`.
-5.  Once the feature works perfectly, the **Developer** reports back to the **Tech Lead**.
-6.  The **Tech Lead** marks the milestone as complete and immediately delegates the next one, repeating until the project is finished!
 
 ---
+## Memory Management
 
 ### For the Tech Lead (Planner)
 *   **Milestone-Driven Context**: The Planner doesn't need to know every line of code written. Its memory is focused on high-level planning and the current milestone.
