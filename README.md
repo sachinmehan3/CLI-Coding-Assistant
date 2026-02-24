@@ -20,15 +20,15 @@ An autonomous, multi-agent programming framework powered by **Mistral AI**. This
 ## Key Features
 
 *   **Two-Agent Architecture**: 
-    *   **Planner (Tech Lead)**: Translates your requests into actionable milestones, updates the project tracker, and orchestrates the Worker.
-    *   **Worker (Developer)**: A headless agent that reads/writes files, creates directories, installs packages, runs linters, and executes Python code iteratively until it passes.
+    *   **Planner**: Translates your requests into actionable milestones, updates the project tracker, and orchestrates the Worker.
+    *   **Worker**: A headless agent that reads/writes files, creates directories, installs packages, and executes Python code iteratively until it passes.
 *   **Intelligent Project Tracking**: Maintains a persistent `project_state.json` to track completed, current, and pending milestones.
 *   **Robust Autonomous Tooling**: 
     *   **Fast Package Management**: Uses `uv` to automatically install missing dependencies on the fly.
     *   **Self-Healing Code**: Automatically runs `py_compile` (for syntax checking) and standard Python execution checks before completing tasks.
     *   **Web Search Integration**: Uses `duckduckgo-search` to find up-to-date documentation when stuck.
 *   **Multi-Tiered Safety Mode**: Run in interactive mode (where the AI asks permission before writing or executing code) or toggle `/auto` mode for blazing fast, hands-off execution.
-*   **Beautiful Terminal UI**: Uses the `rich` library for live-streaming markdown, smooth spinners, and color-coded status tracking.
+*   **Beautiful Terminal UI**: Uses the `rich` library for beautiful markdown rendering in terminal.
 
 ---
 
