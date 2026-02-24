@@ -33,8 +33,9 @@ An autonomous, multi-agent programming framework powered by **Mistral AI**. This
 ---
 
 ## Architecture
+<img width="2874" height="1720" alt="ArchiNew" src="https://github.com/user-attachments/assets/1028dfad-000b-4bc0-b4b0-f5f312a0ff36" />
 
-<img width="1907" height="1335" alt="Untitled-2026-02-22-1548" src="https://github.com/user-attachments/assets/921f6ff7-f8d1-430a-81f7-aae47ee25981" />
+
 
 ---
 
