@@ -1,4 +1,22 @@
-WORKER_TOOLS = [
+SUBAGENT_TOOL = {
+    "type": "function",
+    "function": {
+        "name": "spawn_subagent",
+        "description": "Spawn an isolated sub-agent to handle a complex, self-contained subtask. The sub-agent gets its own context and tools, executes autonomously, and returns a summary. Use this for large refactors, research tasks, or any work you want to delegate without cluttering your main context.",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "task_description": {
+                    "type": "string",
+                    "description": "A detailed prompt describing what the sub-agent should accomplish. Be specific — include file names, requirements, and expected outcomes."
+                }
+            },
+            "required": ["task_description"]
+        }
+    }
+}
+
+BASE_TOOLS = [
     {
         "type": "function",
         "function": {
@@ -64,7 +82,28 @@ WORKER_TOOLS = [
             }
         }
     },
-
+    {
+        "type": "function",
+        "function": {
+            "name": "edit_file",
+            "description": (
+                "Edit an existing file by replacing a specific block of text with new text. "
+                "PREFERRED over `write_file` for modifying existing files — saves tokens and reduces errors. "
+                "First tries exact match, then falls back to fuzzy matching. "
+                "IMPORTANT: Copy the search text EXACTLY from the file including all whitespace and indentation. "
+                "The search string must uniquely identify the block to replace (include enough surrounding lines if needed)."
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "file_path": {"type": "string", "description": "The exact relative path to the file to edit."},
+                    "search": {"type": "string", "description": "The EXACT text block to find in the file. Copy this directly from `get_file_content` output. Include enough lines to uniquely identify the location."},
+                    "replace": {"type": "string", "description": "The new text to replace the search block with."}
+                },
+                "required": ["file_path", "search", "replace"]
+            }
+        }
+    },
     {
         "type": "function",
         "function": {
@@ -155,8 +194,66 @@ WORKER_TOOLS = [
     {
         "type": "function",
         "function": {
+            "name": "ask_user",
+            "description": "Stop and ask the user a question. Use this if you need clarification on requirements, design decisions, or if you are repeatedly failing and need human help.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "question": {
+                        "type": "string",
+                        "description": "The question you want to ask the user, including any options or context they need."
+                    }
+                },
+                "required": ["question"]
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "update_tracker",
+            "description": (
+                "Create or update the project progress tracker (PROGRESS.md). "
+                "Write the FULL markdown content for the file. Use this at the START of a project "
+                "to record the goal and milestones, and after completing work to update the status. "
+                "Use markdown checklists: `- [x]` for done, `- [/]` for in-progress, `- [ ]` for pending."
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "markdown_content": {
+                        "type": "string",
+                        "description": (
+                            "The COMPLETE markdown content for PROGRESS.md. "
+                            "Structure it with a project title, status, and checklist sections. "
+                            "Example:\n"
+                            "# Project: Build REST API\n"
+                            "## Status: In Progress\n"
+                            "## Completed\n"
+                            "- [x] Set up project structure\n"
+                            "## In Progress\n"
+                            "- [/] Implementing auth endpoints\n"
+                            "## Pending\n"
+                            "- [ ] Write unit tests\n"
+                        )
+                    }
+                },
+                "required": ["markdown_content"]
+            }
+        }
+    }
+]
+
+# Main agent gets all tools + spawn_subagent
+AGENT_TOOLS = BASE_TOOLS + [SUBAGENT_TOOL]
+
+# Sub-agent gets base tools + finish_task (no spawn_subagent, no infinite nesting)
+SUBAGENT_TOOLS = BASE_TOOLS + [
+    {
+        "type": "function",
+        "function": {
             "name": "finish_task",
-            "description": "Call this tool ONLY when you have fully completed the assigned task. This tells the Planner you are done.",
+            "description": "Call this tool ONLY when you have fully completed the assigned task. This ends your execution and returns your summary to the main agent.",
             "parameters": {
                 "type": "object",
                 "properties": {
@@ -166,23 +263,6 @@ WORKER_TOOLS = [
                     }
                 },
                 "required": ["summary"]
-            }
-        }
-    },
-    {
-        "type": "function",
-        "function": {
-            "name": "consult_user",
-            "description": "Use this immediately if you encounter repeated errors (like API 403 Forbidden or 401 Unauthorized), get stuck in a loop, or need the user to make a decision (e.g., 'Should I try a different API?').",
-            "parameters": {
-                "type": "object",
-                "properties": {
-                    "question_and_options": {
-                        "type": "string",
-                        "description": "A summary of the error you are getting and the options you are giving the user to proceed."
-                    }
-                },
-                "required": ["question_and_options"]
             }
         }
     }

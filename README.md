@@ -1,9 +1,9 @@
 # CLI Coding Assistant
 
-An autonomous, multi-agent programming framework powered by **Mistral AI**. This project orchestrates a dual-agent system directly in your terminal, consisting of a **Planner** agent that analyzes requirements and delegates tasks, and a **Worker** agent that autonomously writes, tests, and refines the code.
+An autonomous coding agent powered by **LiteLLM** — supporting **OpenAI, Anthropic, Google Gemini, Mistral, Ollama**, and 100+ other LLM providers. A single intelligent agent works directly in your terminal: it plans, writes code, tests, and self-corrects — all in one loop. For complex tasks, it can spawn controlled sub-agents.
 
-![Python Version](https://img.shields.io/badge/python-3.x-blue.svg)
-![Mistral AI](https://img.shields.io/badge/Powered%20By-Mistral%20AI-orange.svg)
+![Python Version](https://img.shields.io/badge/python-≥3.12-blue.svg)
+![LiteLLM](https://img.shields.io/badge/Powered%20By-LiteLLM-blueviolet.svg)
 
 ---
 
@@ -15,55 +15,96 @@ An autonomous, multi-agent programming framework powered by **Mistral AI**. This
 
 ## Key Features
 
-*   **Two-Agent Architecture**: 
-    *   **Planner**: Translates your requests into actionable milestones, updates the project tracker, and orchestrates the Worker.
-    *   **Worker**: A headless agent that reads/writes files, creates directories, installs packages, and executes Python code iteratively until it passes.
-*   **Intelligent Project Tracking**: Maintains a persistent `project_state.json` to track completed, current, and pending milestones.
-*   **Robust Autonomous Tooling**: 
-    *   **Fast Package Management**: Uses `uv` to automatically install missing dependencies on the fly.
-    *   **Self-Healing Code**: Automatically runs `py_compile` (for syntax checking) and standard Python execution checks before completing tasks.
-    *   **Web Search Integration**: Uses `duckduckgo-search` to find up-to-date documentation when stuck.
-*   **Multi-Tiered Safety Mode**: Run in interactive mode (where the AI asks permission before writing or executing code) or toggle `/auto` mode for blazing fast, hands-off execution.
-*   **Beautiful Terminal UI**: Uses the `rich` library for beautiful markdown rendering in terminal.
+*   **Single-Agent Architecture (Inspired by Claude Code)**:
+    *   One main agent that plans inline, codes, and verifies — no handoff overhead.
+    *   Can spawn **controlled sub-agents** for complex, isolated subtasks (sub-agents cannot nest further).
+*   **ReAct Loop**: The agent follows a **Think → Act → Verify → Fix** cycle. It reasons about the task, calls tools, checks results, and self-corrects until the task is done — then returns control to the user.
+*   **Robust Autonomous Tooling**:
+    *   **Smart File Editing**: Preferred `edit_file` tool uses exact-match first, then fuzzy `difflib` fallback — avoiding full-file rewrites for small changes.
+    *   **Syntax Checking**: `py_compile`-based compiler catches syntax errors before execution.
+    *   **Fast Package Management**: Uses `uv add` to install missing dependencies on the fly.
+    *   **Web Search**: DuckDuckGo integration via `ddgs` for real-time documentation lookup.
+    *   **Project Tracking**: Automatic `PROGRESS.md` generation with checklists to track milestones.
+*   **Multi-Tiered Safety**: Interactive approval prompts for writes, edits, deletes, and execution — with an **Approve All** shortcut for hands-off mode.
+*   **Context-Aware Memory Management**:
+    *   Monitors conversation length, auto-summarizes old messages via LLM when nearing context limits.
+    *   Preserves recent tool calls in full while compressing older history.
+    *   Sub-agents run in isolated contexts, preventing memory pollution.
+*   **Multi-Provider Support**: Automatic API key resolution — just pass a `--model` flag and the right key is picked from your `.env`.
+*   **Beautiful Terminal UI**: Uses the `rich` library for markdown rendering, colored diffs, spinners, and styled panels.
 
 ---
 
 ## Architecture
-<img width="2874" height="1720" alt="ArchiNew" src="https://github.com/user-attachments/assets/1028dfad-000b-4bc0-b4b0-f5f312a0ff36" />
 
+```mermaid
+graph TD
+    User([👤 User Input]) --> Main["main.py<br/>CLI Entry Point"]
+    Main -->|"messages + model"| AgentLoop["agent.py<br/>ReAct Agent Loop"]
 
+    AgentLoop -->|"LLM call"| AI["ai_utils.py<br/>LiteLLM + Retry"]
+    AI -->|"response"| AgentLoop
+
+    AgentLoop -->|"tool calls"| Helpers["agent_helpers.py<br/>Tool Router + Memory + Approval"]
+
+    Helpers --> Tools["functions/<br/>11 Tool Implementations"]
+
+    Tools --> FS["File Ops<br/>read · write · edit · delete · mkdir"]
+    Tools --> Exec["Execution<br/>run_python · compile"]
+    Tools --> Ext["External<br/>web_search · install_package"]
+    Tools --> Track["Tracking<br/>PROGRESS.md"]
+
+    AgentLoop -->|"spawn_subagent"| Sub["subagent.py<br/>Isolated Sub-Agent"]
+    Sub -->|"own ReAct loop"| AI
+    Sub -->|"tool calls"| Helpers
+    Sub -->|"finish_task summary"| AgentLoop
+
+    Schemas["agent_tools.py<br/>Tool Schemas"] -.->|"AGENT_TOOLS"| AgentLoop
+    Schemas -.->|"SUBAGENT_TOOLS"| Sub
+
+    style User fill:#4A90D9,stroke:#333,color:#fff
+    style Main fill:#2D3748,stroke:#4A5568,color:#E2E8F0
+    style AgentLoop fill:#553C9A,stroke:#6B46C1,color:#E9D8FD
+    style AI fill:#2B6CB0,stroke:#3182CE,color:#EBF8FF
+    style Helpers fill:#2F855A,stroke:#38A169,color:#F0FFF4
+    style Tools fill:#2F855A,stroke:#38A169,color:#F0FFF4
+    style FS fill:#276749,stroke:#2F855A,color:#C6F6D5
+    style Exec fill:#276749,stroke:#2F855A,color:#C6F6D5
+    style Ext fill:#276749,stroke:#2F855A,color:#C6F6D5
+    style Track fill:#276749,stroke:#2F855A,color:#C6F6D5
+    style Sub fill:#6B46C1,stroke:#805AD5,color:#E9D8FD
+    style Schemas fill:#4A5568,stroke:#718096,color:#E2E8F0
+```
 
 ---
-
 
 ## Project Structure
 
 ```text
 coder-agent/
 │
-├──  main.py               # Application entry point
-├──  planner.py            # The Tech Lead Agent loop and tools
-├──  planner_tools.py      # Tech Lead Agent tool definitions
-├──  planner_helpers.py    # Tech Lead Agent logic helpers
-├──  worker.py             # The Developer Agent loop and tools
-├──  worker_tools.py       # Developer Agent tool definitions
-├──  worker_helpers.py     # Developer Agent logic helpers
-├──  ai_utils.py           # Resilient async wrappers for Mistral API calls
-├──  memory.py             # Conversation summarization logic to prevent context bloat
+├──  main.py               # CLI entry point — arg parsing, API key resolution, REPL loop
+├──  agent.py              # Main ReAct agent loop, system prompt, file-tree injection
+├──  agent_tools.py        # Tool schemas for main agent (AGENT_TOOLS) and sub-agent (SUBAGENT_TOOLS)
+├──  agent_helpers.py      # Tool execution, approval flow, diff display, memory trimming + summarization
+├──  subagent.py           # Isolated sub-agent — own ReAct loop, auto-nudge, finish_task exit
+├──  ai_utils.py           # LiteLLM completion wrapper with tenacity retry (rate limits, timeouts)
 │
-├── functions/            # Core agent capabilities (Tools)
-│   ├── create_directory.py
-│   ├── edit_file.py
-│   ├── get_file_content.py
-│   ├── get_files_info.py
-│   ├── install_package.py
-│   ├── project_state.py
-│   ├── run_compiler.py
-│   ├── run_python_file.py
-│   ├── web_search.py
-│   └── write_file.py
+├── functions/             # Tool implementations (sandboxed to working directory)
+│   ├── get_files_info.py  # Recursive directory tree with smart ignore list
+│   ├── get_file_content.py# Read file with 10k char truncation guard
+│   ├── write_file.py      # Create / overwrite file (requires parent dir to exist)
+│   ├── edit_file.py       # Search/replace with exact → fuzzy fallback via difflib
+│   ├── delete_file.py     # Safe file deletion with path validation
+│   ├── create_directory.py# Recursive mkdir with idempotency
+│   ├── run_compiler.py    # py_compile syntax checker
+│   ├── run_python_file.py # Subprocess execution with 30s timeout + output truncation
+│   ├── web_search.py      # DuckDuckGo search via ddgs
+│   ├── install_package.py # uv add package installer
+│   └── project_state.py   # PROGRESS.md read/write for milestone tracking
 │
-└── workspace/            # Default directory where the agent builds your projects
+├── docs/                  # Module-level documentation
+└── workspace/             # Default directory where the agent builds your projects
 ```
 
 ---
@@ -72,61 +113,99 @@ coder-agent/
 
 ### Prerequisites
 
-1.  **Python 3.x** installed.
-2.  **Mistral API Key**. Get one from [Mistral AI](https://mistral.ai/).
-3.  **uv** (Optional but highly recommended for the agent's package installation tool).
+1.  **Python ≥ 3.12** installed.
+2.  **An API Key** from at least one supported provider (e.g. [Mistral AI](https://mistral.ai/), [OpenAI](https://platform.openai.com/), [Anthropic](https://console.anthropic.com/), [Google Gemini](https://aistudio.google.com/)).
+3.  **[uv](https://docs.astral.sh/uv/)** — used by the agent's `install_package` tool to manage dependencies.
 
 ### Installation
 
 1.  Clone the repository:
     ```bash
-    git clone https://github.com/yourusername/coder-agent.git
-    cd coder-agent
+    git clone https://github.com/sachinmehan3/CLI-Coding-Assistant.git
+    cd CLI-Coding-Assistant
     ```
 
-2.  Install the required dependencies:
+2.  Install dependencies (using uv or pip):
     ```bash
-    pip install mistralai rich python-dotenv duckduckgo-search
+    # With uv (recommended)
+    uv sync
+
+    # Or with pip
+    pip install litellm rich python-dotenv ddgs tenacity
     ```
 
-3.  Set up your environment variables. Create a `.env` file in the root directory:
+3.  Create a `.env` file with the key for your chosen provider:
     ```env
-    MISTRAL_API_KEY=your_api_key_here
+    # Only the key matching your --model flag is required
+    MISTRAL_API_KEY=your_mistral_key_here
+    # OPENAI_API_KEY=sk-your-openai-key-here
+    # ANTHROPIC_API_KEY=sk-ant-your-anthropic-key-here
+    # GEMINI_API_KEY=your-gemini-key-here
     ```
 
 ---
 
 ## Usage
 
-Start by running `main.py`. You can optionally specify a target directory to work inside (defaults to `workspace`).
+Start by running `main.py`. You can optionally specify a target directory and/or an LLM model.
 
 ```bash
+# Default (Mistral Medium)
 python main.py --dir my_new_project
+
+# Use OpenAI
+python main.py --model gpt-4o
+
+# Use Anthropic
+python main.py --model anthropic/claude-sonnet-4-20250514
+
+# Use Google Gemini
+python main.py --model gemini/gemini-2.0-flash
+
+# Use local Ollama
+python main.py --model ollama/llama3
 ```
 
-### Slash Commands
+### In-Session Commands
 
-While talking to the Assistant, you can use the following quick commands:
+| Command  | Description                        |
+|----------|------------------------------------|
+| `/clear` | Clears the terminal screen         |
+| `exit`   | Exits the session                  |
 
-*   `/status`: Displays the beautiful UI card showing current project goals, completed milestones, and pending tasks.
-*   `/plan`: Switches to Plan Mode. The Tech Lead (Planner) takes over to coordinate and assign tasks.
-*   `/quick`: Switches to Quick Mode. Speak directly to the Developer (Worker) for one-shot tasks without milestone tracking.
-*   `/toggle_auto`: Toggles Auto Mode. When ON, the worker will automatically write and execute files without asking for standard `(y/n)` confirmations.
-*   `/clear`: Clears the terminal screen.
-
+During execution the agent will prompt `(y)es / (n)o / (a)pprove all` before any destructive action (write, edit, delete, execute). Choose **a** to enable auto-approval for the rest of the current task.
 
 ---
+
+## How It Works
+
+1.  **User sends a message** → appended to conversation history.
+2.  **File tree injected** into the system prompt so the agent always knows the project layout.
+3.  **LLM generates** a response — either pure text (returned to user) or tool calls.
+4.  **Tools execute** through `agent_helpers.py`, which routes each call to the right `functions/` implementation, shows diffs, and prompts for approval.
+5.  **Tool results** are appended to history and the loop continues until the agent responds with text only.
+6.  **Memory management** kicks in when conversation history exceeds ~120k characters — older messages are LLM-summarized while recent context is preserved in full.
+7.  **Sub-agents** (via `spawn_subagent`) run the same loop in an isolated context and return a summary to the main agent upon calling `finish_task`.
+
+---
+
 ## Memory Management
 
-### For the Tech Lead (Planner)
-*   **Milestone-Driven Context**: The Planner doesn't need to know every line of code written. Its memory is focused on high-level planning and the current milestone.
-*   **Active Summarization**: The `memory.py` module actively monitors the length of the Planner's context. When the history becomes too long, the system compresses older conversations into a dense summary, preserving key decisions and context without the bloat.
-*   **State Tracking**: By relying on the persistent `project_state.json` file, the Planner maintains an accurate absolute truth of the overall goal and next steps, even after its chat history is summarized.
+*   **Active Summarization**: When history grows past the limit, `memory.py` compresses older messages into a dense LLM-generated summary, preserving key decisions without context bloat.
+*   **Sliding Window**: The most recent 8 messages (plus all system prompts) are always preserved in full.
+*   **Summary Stacking**: Previously generated summaries are preserved verbatim — only new unsummarized messages are compressed, preventing information loss over long sessions.
+*   **Sub-Agent Isolation**: Sub-agents get their own context and memory, preventing complex subtasks from polluting the main agent's history.
 
-### For the Developer (Worker)
-*   **Sliding Window Conservation**: The Worker actively tracking the character length of its coding iterations. When the context exceeds a safe limit, older steps (like early failed linting or execution attempts) are systematically truncated to protect the context window.
-*   **Context & Tool Call Preservation**: During truncation, the Worker anchors the core instructions and the Planner's initial task objective. It perfectly preserves the most recent tool calls and execution results, ensuring it never loses its vital short-term memory of the exact code or error it is currently fixing.
-*   **Truncation Safeguards**: Reading large files or executing scripts that dump massive amounts of logs to the terminal are automatically truncated. This prevents a single errant print statement from instantly blowing up the context window.
+---
+
+## Safety & Sandboxing
+
+*   **Path Validation**: Every file/directory tool validates that the target path stays within the working directory — no escaping to system files.
+*   **Approval Prompts**: Writes, edits, deletes, and script execution all require explicit user approval (or auto-approve mode).
+*   **Execution Timeout**: `run_python_file` enforces a 30-second timeout with `stdin=DEVNULL` to prevent infinite loops and hanging prompts.
+*   **Output Truncation**: Script output is capped at 50 lines to avoid blowing up the agent's context window.
+*   **File Read Limits**: `get_file_content` truncates at 10,000 characters.
+*   **No GUI Execution**: The system prompt and tool descriptions explicitly forbid running GUI apps or blocking servers.
 
 ---
 
@@ -134,8 +213,7 @@ While talking to the Assistant, you can use the following quick commands:
 
 *   **Docker Containerization**: Isolate the agent's environment and workspace for enhanced security, reproducibility, and easier deployment.
 *   **Streaming & Async**: Implement asynchronous operations and streamed responses for a faster, more responsive terminal experience while the agent generates code and plans.
-*   **Intelligent File Editing Tool**: Provide the LLM with a dedicated tool to apply diffs or targeted edits to existing files, rather than overwriting entire files for small bug fixes (showing diff changes).
-*   **Support for Multiple LLM Providers**: Expand compatibility beyond Mistral AI to allow users to bring their own API keys for OpenAI, Anthropic, Google Gemini, or local models via Ollama.
+*   **Multi-File Editing**: Batch edits across multiple files in a single tool call for large refactors.
 
 ---
 

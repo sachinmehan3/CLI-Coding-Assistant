@@ -1,103 +1,74 @@
 import os
 import argparse
 from dotenv import load_dotenv
-from mistralai import Mistral
 from rich.console import Console
-from rich.panel import Panel
-from rich.markdown import Markdown
 
-from planner import get_initial_planner_messages, run_planner_step
-from worker import run_worker_agent
-from planner_helpers import display_project_tracker
+from agent import get_initial_messages, run_agent_loop
+
+PROVIDER_KEY_MAP = {
+    "mistral/": "MISTRAL_API_KEY",
+    "gpt-": "OPENAI_API_KEY",
+    "o1": "OPENAI_API_KEY",
+    "o3": "OPENAI_API_KEY",
+    "o4": "OPENAI_API_KEY",
+    "anthropic/": "ANTHROPIC_API_KEY",
+    "claude-": "ANTHROPIC_API_KEY",
+    "gemini/": "GEMINI_API_KEY",
+}
+
+def resolve_api_key_env(model_name):
+    """Returns the env var name required for the given model, or None if not needed."""
+    for prefix, env_var in PROVIDER_KEY_MAP.items():
+        if model_name.startswith(prefix):
+            return env_var
+    return "OPENAI_API_KEY"
 
 def main():
-    parser = argparse.ArgumentParser(description="AI Planner and Worker")
+    parser = argparse.ArgumentParser(description="CLI Coding Assistant")
     parser.add_argument("--dir", type=str, default="workspace", help="The directory the agent will work in.")
+    parser.add_argument("--model", type=str, default="mistral/mistral-medium-latest", help="LiteLLM model identifier (e.g. gpt-4o, anthropic/claude-sonnet-4-20250514, mistral/mistral-medium-latest)")
     args = parser.parse_args()
     
     working_dir = args.dir
+    model = args.model
     
     if not os.path.exists(working_dir):
         os.makedirs(working_dir)
 
     load_dotenv()
     
-    api_key = os.environ.get("MISTRAL_API_KEY")
-    if not api_key:
-        print("ERROR: MISTRAL_API_KEY not found in .env file.")
+    required_key = resolve_api_key_env(model)
+    if required_key and not os.environ.get(required_key):
+        print(f"ERROR: {required_key} not found in .env file (required for model '{model}').")
         return
 
-    client = Mistral(api_key=api_key)
-    model = "mistral-medium-latest" 
     console = Console()
     
-    console.print(f"[bold green] Workspace set to: {working_dir}[/bold green]")
+    console.print(f"[bold green] Workspace: {working_dir}[/bold green]")
+    console.print(f"[bold green] Model: {model}[/bold green]")
 
-    current_mode = "plan"
-    auto_mode = True
-    planner_messages = get_initial_planner_messages()
+    messages = get_initial_messages()
 
     console.print("[yellow]Starting...[/yellow]")
-    console.print("[dim]Type '/quick' to speak directly to the Worker, or '/plan' to let the Planner manage tasks.[/dim]")
-    console.print("[dim]Type '/toggle_auto' to turn off automatic executions.[/dim]")
+    console.print("[dim]Commands: /clear, exit[/dim]")
 
     while True:
         try:
-            if current_mode == "plan":
-                prompt_text = "\n[bold blue](Plan) You > [/bold blue]"
-            else:
-                prompt_text = "\n[bold blue](Quick) You > [/bold blue]"
-
-            user_input = console.input(prompt_text)
+            user_input = console.input("\n[bold blue]You > [/bold blue]")
             cmd = user_input.strip().lower()
             
             if cmd in ["exit", "quit"]:
                 break
                 
-            elif cmd == "/toggle_auto":
-                auto_mode = not auto_mode
-                status_text = "ON (No prompts, high speed)" if auto_mode else "OFF (Safe mode, prompts enabled)"
-                console.print(f"\n[bold magenta] Auto Mode is now {status_text}[/bold magenta]")
-                continue
-                
             elif cmd == "/clear":
                 os.system('cls' if os.name == 'nt' else 'clear')
                 continue
                 
-            elif cmd == "/status":
-                display_project_tracker(working_dir, console)
-                continue
-                
-            elif cmd == "/plan":
-                current_mode = "plan"
-                console.print("\n[bold green]Switched to PLAN mode.[/bold green]")
-                continue
-                
-            elif cmd == "/quick":
-                current_mode = "quick"
-                console.print("\n[bold green]Switched to QUICK mode.[/bold green]")
-                continue
-            
+
             if not cmd:
                 continue
 
-            if current_mode == "plan":
-                planner_messages = run_planner_step(
-                    client, model, console, working_dir, user_input, planner_messages, auto_mode
-                )
-            
-            elif current_mode == "quick":
-                summary = run_worker_agent(
-                    client, model, console, task_description=user_input, working_dir=working_dir, auto_mode=auto_mode
-                )
-                
-                if summary:
-                    console.print("\n")
-                    console.print(Panel(
-                        Markdown(summary), 
-                        title="[bold green]Summary[/bold green]", 
-                        border_style="green"
-                    ))
+            messages = run_agent_loop(model, console, working_dir, user_input, messages)
 
         except Exception as e:
             from rich.markup import escape

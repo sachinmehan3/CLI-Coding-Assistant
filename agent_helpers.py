@@ -1,0 +1,264 @@
+import os
+import difflib
+from rich.markdown import Markdown
+
+
+from functions.get_files_info import get_file_info
+from functions.get_file_content import get_file_content
+from functions.write_file import write_file
+from functions.edit_file import edit_file
+from functions.delete_file import delete_file
+from functions.create_directory import create_directory
+from functions.run_python_file import run_python_file
+from functions.web_search import web_search
+from functions.install_package import install_package
+from functions.run_compiler import run_compiler
+from functions.project_state import get_progress, write_progress
+
+from ai_utils import safe_completion
+
+
+def summarize_history(model, messages_to_summarize):
+    """Compresses older conversation history into a dense LLM-generated summary."""
+    conversation_text = ""
+    for msg in messages_to_summarize:
+        raw_role = msg.get("role") if isinstance(msg, dict) else getattr(msg, "role", "")
+        raw_content = msg.get("content") if isinstance(msg, dict) else getattr(msg, "content", "")
+        raw_name = msg.get("name") if isinstance(msg, dict) else getattr(msg, "name", "")
+        
+        role = str(raw_role) if raw_role is not None else ""
+        content = str(raw_content) if raw_content is not None else ""
+        name = str(raw_name) if raw_name is not None else ""
+        
+        tool_calls = msg.get("tool_calls", []) if isinstance(msg, dict) else getattr(msg, "tool_calls", [])
+        if tool_calls:
+            for tc in tool_calls:
+                func = tc.get("function", {}) if isinstance(tc, dict) else getattr(tc, "function", None)
+                func_name = func.get("name", "") if isinstance(func, dict) else getattr(func, "name", "")
+                func_args = func.get("arguments", "") if isinstance(func, dict) else getattr(func, "arguments", "")
+                content = content + f"\n[ACTION TAKEN: Called tool '{func_name}' with instructions: {func_args}]"
+
+        prefix = f"{role} ({name})" if name else role
+        safe_content = str(content)[:2000] + ("..." if len(str(content)) > 2000 else "")
+        conversation_text += f"[{prefix.upper()}]: {safe_content}\n"
+
+    prompt = (
+        "You are the agent's memory module. Summarize the following conversation history. "
+        "Focus strictly on: 1) What tasks have been completed. 2) What decisions were made. "
+        "3) The current state of the codebase. "
+        "Be highly concise, technical, and accurate. Do not add fluff.\n\n"
+        f"HISTORY TO SUMMARIZE:\n{conversation_text}"
+    )
+
+    response = safe_completion(
+        model=model,
+        messages=[{"role": "user", "content": prompt}]
+    )
+    return response.choices[0].message.content
+
+
+def trim_memory(messages, max_chars, console, model):
+    """Trims the agent's memory to stay within context window limits."""
+    def get_msg_length(msg):
+        content = msg.get("content") if isinstance(msg, dict) else getattr(msg, "content", "")
+        tool_calls = msg.get("tool_calls", []) if isinstance(msg, dict) else getattr(msg, "tool_calls", [])
+        return len(str(content)) + len(str(tool_calls))
+
+    total_length = sum(get_msg_length(m) for m in messages)
+
+    if total_length > max_chars:
+        console.print(f"\n[dim yellow] Memory reached {total_length} chars. Summarizing older messages...[/dim yellow]")
+        
+        system_prompt = messages[0]
+        tail = messages[-8:]
+        
+        # Drop orphaned 'tool' messages at the start of the tail
+        while len(tail) > 0:
+            first_msg = tail[0]
+            role = first_msg.get("role") if isinstance(first_msg, dict) else getattr(first_msg, "role", "")
+            if role == "tool":
+                tail.pop(0)
+            else:
+                break
+                
+        middle_messages = messages[1 : len(messages) - len(tail)]
+        
+        # Preserve existing summaries verbatim instead of re-summarizing them
+        old_summaries = []
+        regular_messages = []
+        for msg in middle_messages:
+            content = msg.get("content", "") if isinstance(msg, dict) else getattr(msg, "content", "")
+            if str(content).startswith("PREVIOUS CONVERSATION SUMMARY:"):
+                old_summaries.append(str(content))
+            else:
+                regular_messages.append(msg)
+        
+        new_summary = summarize_history(model, regular_messages) if regular_messages else ""
+        
+        # Combine: old summaries preserved as-is, new summary appended
+        combined_parts = old_summaries + ([new_summary] if new_summary else [])
+        combined_text = "\n\n".join(combined_parts)
+        
+        summary_message = {
+            "role": "system", 
+            "content": f"PREVIOUS CONVERSATION SUMMARY:\n{combined_text}"
+        }
+        
+        messages = [system_prompt, summary_message] + tail
+        console.print(f"[dim yellow] Memory optimized. Resuming with {sum(get_msg_length(m) for m in messages)} chars.[/dim yellow]")
+
+    return messages
+
+
+def show_diff(console, old_text, new_text, file_path):
+    """Prints a colored unified diff to the console."""
+    old_lines = old_text.splitlines(keepends=True)
+    new_lines = new_text.splitlines(keepends=True)
+    diff = difflib.unified_diff(old_lines, new_lines, fromfile=f"a/{file_path}", tofile=f"b/{file_path}")
+
+    has_diff = False
+    for line in diff:
+        has_diff = True
+        line = line.rstrip("\n")
+        if line.startswith("+") and not line.startswith("+++"):
+            console.print(f"[green]{line}[/green]")
+        elif line.startswith("-") and not line.startswith("---"):
+            console.print(f"[red]{line}[/red]")
+        elif line.startswith("@@"):
+            console.print(f"[cyan]{line}[/cyan]")
+        else:
+            console.print(f"[dim]{line}[/dim]")
+
+    if not has_diff:
+        console.print("[dim]No changes detected.[/dim]")
+
+
+def ask_approval(console, message, approve_all):
+    """Prompts for approval. Returns True if approved. Handles 'a' to enable approve-all."""
+    if approve_all[0]:
+        console.print(f"[dim yellow]Auto-approved: {message}[/dim yellow]")
+        return True
+    
+    console.print(f"\n[bold red] WARNING: {message}[/bold red]")
+    approval = ''
+    while approval not in ['y', 'yes', 'n', 'no', 'a']:
+        approval = console.input("[bold red](y)es / (n)o / (a)pprove all > [/bold red]").strip().lower()
+    
+    if approval == 'a':
+        approve_all[0] = True
+        console.print("[bold magenta] Approve-all enabled for this task.[/bold magenta]")
+        return True
+    
+    return approval in ['y', 'yes']
+
+
+def execute_tool(function_name, args, working_dir, approve_all, console):
+    """Executes a single tool and returns the result string."""
+    function_result = ""
+
+    if function_name in ["get_files_info", "get_file_content", "create_directory", "web_search", "run_compiler"]:
+        with console.status(f"[bold cyan]Executing {function_name}...[/bold cyan]", spinner="dots"):
+            if function_name == "get_files_info":
+                function_result = get_file_info(working_dir, args.get("directory", "."))
+                console.print(f"[dim]Checked directory tree[/dim]")
+                
+            elif function_name == "get_file_content":
+                function_result = get_file_content(working_dir, args.get("file_path"))
+                console.print(f"[dim]Read file: {args.get('file_path')}[/dim]")
+                
+            elif function_name == "create_directory":
+                function_result = create_directory(working_dir, args.get("directory_path"))
+                console.print(f"[dim]Created directory: {args.get('directory_path')}[/dim]")
+                
+            elif function_name == "web_search":
+                function_result = web_search(args.get("query"))
+                console.print(f"[dim]Searched web for: {args.get('query')}[/dim]")
+                
+            elif function_name == "run_compiler":
+                function_result = run_compiler(working_dir, args.get("file_path"))
+                console.print(f"[dim]Compiled file: {args.get('file_path')}[/dim]")
+
+    elif function_name == "write_file":
+        file_path = args.get("file_path")
+        content = args.get("content")
+        
+        if not approve_all[0]:
+            abs_path = os.path.join(os.path.abspath(working_dir), file_path)
+            if os.path.isfile(abs_path):
+                with open(abs_path, "r", encoding="utf-8") as f:
+                    old_content = f.read()
+                show_diff(console, old_content, content, file_path)
+            else:
+                console.print(f"[green](new file — {len(content)} chars)[/green]")
+        
+        if ask_approval(console, f"Agent wants to WRITE '{file_path}'.", approve_all):
+            with console.status(f"[bold cyan]Writing {file_path}...[/bold cyan]", spinner="dots"):
+                function_result = write_file(working_dir, file_path, content)
+                console.print(f"[dim]Wrote file: {file_path}[/dim]")
+        else:
+            function_result = "SYSTEM ERROR: User denied permission to write file."
+
+    elif function_name == "edit_file":
+        file_path = args.get("file_path")
+        search = args.get("search", "")
+        replace = args.get("replace", "")
+        
+        if not approve_all[0]:
+            show_diff(console, search, replace, file_path)
+        
+        if ask_approval(console, f"Agent wants to EDIT '{file_path}'.", approve_all):
+            with console.status(f"[bold cyan]Editing {file_path}...[/bold cyan]", spinner="dots"):
+                function_result = edit_file(working_dir, file_path, search, replace)
+                console.print(f"[dim]Edited file: {file_path}[/dim]")
+        else:
+            function_result = "SYSTEM ERROR: User denied permission to edit file." 
+
+    elif function_name == "delete_file":
+        file_path = args.get("file_path")
+        
+        if ask_approval(console, f"Agent wants to DELETE '{file_path}'.", approve_all):
+            with console.status(f"[bold cyan]Deleting {file_path}...[/bold cyan]", spinner="dots"):
+                function_result = delete_file(working_dir, file_path)
+                console.print(f"[dim]Deleted file: {file_path}[/dim]")
+        else:
+            function_result = "SYSTEM ERROR: User denied permission to delete file."
+
+    elif function_name == "run_python_file":
+        file_path = args.get("file_path")
+        script_args = args.get("args", [])
+        
+        if ask_approval(console, f"Agent wants to EXECUTE '{file_path}'.", approve_all):
+            with console.status(f"[bold cyan]Executing {file_path}...[/bold cyan]", spinner="dots"):
+                function_result = run_python_file(working_dir, file_path, script_args)
+                console.print(f"[dim]Executed: {file_path}[/dim]")
+        else:
+            function_result = "SYSTEM ERROR: User denied permission."
+    
+    elif function_name == "install_package":
+        package_name = args.get("package_name")
+        
+        if ask_approval(console, f"Agent wants to INSTALL PACKAGE: '{package_name}'.", approve_all):
+            with console.status(f"[bold cyan]Installing {package_name}...[/bold cyan]", spinner="dots"):
+                function_result = install_package(working_dir, package_name)
+                console.print(f"[dim]Installed: {package_name}[/dim]")
+        else:
+            function_result = "SYSTEM ERROR: User denied permission."
+
+    elif function_name == "update_tracker":
+        markdown_content = args.get("markdown_content", "")
+        function_result = write_progress(working_dir, markdown_content)
+        console.print(f"[dim]Updated PROGRESS.md[/dim]")
+
+    elif function_name == "ask_user":
+        question = args.get("question", "")
+        console.print("\n[bold cyan] AGENT NEEDS YOUR INPUT:[/bold cyan]")
+        console.print(Markdown(question))
+        user_feedback = console.input("\n[bold blue]Your response > [/bold blue]")
+        if user_feedback.lower() in ['exit', 'quit']:
+            return "Task aborted by user."
+        function_result = f"USER RESPONSE: {user_feedback}"
+
+    else:
+        function_result = f"SYSTEM ERROR: Unknown tool '{function_name}' was called. This tool does not exist."
+
+    return function_result
