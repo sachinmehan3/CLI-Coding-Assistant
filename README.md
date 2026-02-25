@@ -36,7 +36,7 @@ An autonomous coding agent powered by **LiteLLM** supporting **OpenAI, Anthropic
 ---
 
 ## Architecture
-<img width="1418" height="1215" alt="NewnewArchi" src="https://github.com/user-attachments/assets/90d4b6dd-9bab-4b53-b01e-fb3f1656b7d0" />
+<img width="1503" height="1215" alt="image" src="https://github.com/user-attachments/assets/17f81c31-4892-4d1b-b14d-37def3242fff" />
 
 
 ---
