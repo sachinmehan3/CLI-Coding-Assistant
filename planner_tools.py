@@ -3,7 +3,7 @@ PLANNER_TOOLS = [
         "type": "function",
         "function": {
             "name": "delegate_to_worker",
-            "description": "Delegates the entire project to the developer agent in one huge prompt.",
+            "description": "Delegates the entire project to the Worker agent in one huge prompt.",
             "parameters": {
                 "type": "object",
                 "properties": {
@@ -43,7 +43,7 @@ PLANNER_TOOLS = [
         "type": "function",
         "function": {
             "name": "get_file_content",
-            "description": "Reads and returns the text content of a specified file. Use this to understand existing code architecture before delegating a task to the coding assistant.",
+            "description": "Reads and returns the text content of a specified file. Use this to understand existing code architecture before delegating a task to the Worker.",
             "parameters": {
                 "type": "object",
                 "properties": {

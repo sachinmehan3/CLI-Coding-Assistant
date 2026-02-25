@@ -53,7 +53,7 @@ WORKER_TOOLS = [
         "type": "function",
         "function": {
             "name": "write_file",
-            "description": "Creates a NEW file. Do not use this for modifying existing files. You MUST provide the ENTIRE, complete file content from top to bottom.",
+            "description": "Creates a new file or overwrites an existing file. You MUST provide the ENTIRE, complete file content from top to bottom.",
             "parameters": {
                 "type": "object",
                 "properties": {
@@ -100,7 +100,7 @@ WORKER_TOOLS = [
         "type": "function",
         "function": {
             "name": "run_python_file",
-            "description": "Executes a Python script and returns the console output (STDOUT and STDERR). CAUTION: NEVER execute GUI applications or blocking servers. If the script contains a GUI (e.g. tkinter, PyQt), test it strictly by using the run_linter tool instead of running it.",
+            "description": "Executes a Python script and returns the console output (STDOUT and STDERR). CAUTION: NEVER execute GUI applications or blocking servers. If the script contains a GUI (e.g. tkinter, PyQt), test it strictly by using the run_compiler tool instead of running it.",
             "parameters": {
                 "type": "object",
                 "properties": {
@@ -156,7 +156,7 @@ WORKER_TOOLS = [
         "type": "function",
         "function": {
             "name": "finish_task",
-            "description": "Call this tool ONLY when you have fully completed the assigned task. This tells the Tech Lead you are done.",
+            "description": "Call this tool ONLY when you have fully completed the assigned task. This tells the Planner you are done.",
             "parameters": {
                 "type": "object",
                 "properties": {
