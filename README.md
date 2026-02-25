@@ -36,47 +36,12 @@ An autonomous coding agent powered by **LiteLLM** — supporting **OpenAI, Anthr
 ---
 
 ## Architecture
+<img width="2874" height="1720" alt="ArchiNew" src="https://github.com/user-attachments/assets/1028dfad-000b-4bc0-b4b0-f5f312a0ff36" />
 
-```mermaid
-graph TD
-    User([👤 User Input]) --> Main["main.py<br/>CLI Entry Point"]
-    Main -->|"messages + model"| AgentLoop["agent.py<br/>ReAct Agent Loop"]
 
-    AgentLoop -->|"LLM call"| AI["ai_utils.py<br/>LiteLLM + Retry"]
-    AI -->|"response"| AgentLoop
-
-    AgentLoop -->|"tool calls"| Helpers["agent_helpers.py<br/>Tool Router + Memory + Approval"]
-
-    Helpers --> Tools["functions/<br/>11 Tool Implementations"]
-
-    Tools --> FS["File Ops<br/>read · write · edit · delete · mkdir"]
-    Tools --> Exec["Execution<br/>run_python · compile"]
-    Tools --> Ext["External<br/>web_search · install_package"]
-    Tools --> Track["Tracking<br/>PROGRESS.md"]
-
-    AgentLoop -->|"spawn_subagent"| Sub["subagent.py<br/>Isolated Sub-Agent"]
-    Sub -->|"own ReAct loop"| AI
-    Sub -->|"tool calls"| Helpers
-    Sub -->|"finish_task summary"| AgentLoop
-
-    Schemas["agent_tools.py<br/>Tool Schemas"] -.->|"AGENT_TOOLS"| AgentLoop
-    Schemas -.->|"SUBAGENT_TOOLS"| Sub
-
-    style User fill:#4A90D9,stroke:#333,color:#fff
-    style Main fill:#2D3748,stroke:#4A5568,color:#E2E8F0
-    style AgentLoop fill:#553C9A,stroke:#6B46C1,color:#E9D8FD
-    style AI fill:#2B6CB0,stroke:#3182CE,color:#EBF8FF
-    style Helpers fill:#2F855A,stroke:#38A169,color:#F0FFF4
-    style Tools fill:#2F855A,stroke:#38A169,color:#F0FFF4
-    style FS fill:#276749,stroke:#2F855A,color:#C6F6D5
-    style Exec fill:#276749,stroke:#2F855A,color:#C6F6D5
-    style Ext fill:#276749,stroke:#2F855A,color:#C6F6D5
-    style Track fill:#276749,stroke:#2F855A,color:#C6F6D5
-    style Sub fill:#6B46C1,stroke:#805AD5,color:#E9D8FD
-    style Schemas fill:#4A5568,stroke:#718096,color:#E2E8F0
-```
 
 ---
+
 
 ## Project Structure
 
