@@ -72,8 +72,8 @@ def run_agent_loop(model, console, working_dir, user_input, messages):
 
     while True:
         try:
-            MAX_CHARS = 120000
-            messages = trim_memory(messages, MAX_CHARS, console, model)
+            MAX_TOKENS = 30000
+            messages = trim_memory(messages, MAX_TOKENS, console, model)
 
             # Refresh file tree only when dirty
             if tree_dirty:

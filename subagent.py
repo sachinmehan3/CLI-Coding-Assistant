@@ -60,8 +60,8 @@ def run_subagent(model, console, task_description, working_dir):
             f" CURRENT PROJECT FILES:\n{file_tree_cache}\n\n"
         )
 
-        MAX_CHARS = 120000
-        messages = trim_memory(messages, MAX_CHARS, console, model)
+        MAX_TOKENS = 30000
+        messages = trim_memory(messages, MAX_TOKENS, console, model)
 
         with console.status("[bold magenta]Sub-Agent thinking...[/bold magenta]", spinner="dots"):
             response = safe_completion(

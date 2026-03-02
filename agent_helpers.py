@@ -1,6 +1,8 @@
 import os
 import difflib
+import litellm
 from rich.markdown import Markdown
+from rich.panel import Panel
 
 
 from functions.get_files_info import get_file_info
@@ -57,17 +59,72 @@ def summarize_history(model, messages_to_summarize):
     return response.choices[0].message.content
 
 
-def trim_memory(messages, max_chars, console, model):
-    """Trims the agent's memory to stay within context window limits."""
-    def get_msg_length(msg):
-        content = msg.get("content") if isinstance(msg, dict) else getattr(msg, "content", "")
+# Tool results larger than this (in chars) will be shrunk once they leave the recent window
+SHRINK_THRESHOLD = 500
+PROTECT_RECENT = 8
+
+
+def shrink_old_tool_results(messages, protect_recent=PROTECT_RECENT):
+    """Replace large, already-processed tool results with compact summaries.
+    
+    Keeps recent messages intact (they may still be needed for the current
+    reasoning chain) but shrinks older tool outputs that the agent has 
+    already acted upon — preventing stale file reads and command outputs
+    from wasting context for the rest of the session.
+    """
+    if len(messages) <= protect_recent + 1:  # +1 for system prompt
+        return messages
+    
+    cutoff = len(messages) - protect_recent
+    
+    for i in range(1, cutoff):  # Skip system prompt at index 0
+        msg = messages[i]
+        if not isinstance(msg, dict):
+            continue
+        if msg.get("role") != "tool":
+            continue
+            
+        content = str(msg.get("content", ""))
+        if len(content) <= SHRINK_THRESHOLD:
+            continue
+        
+        # Already shrunk in a previous pass
+        if content.startswith("[Shrunk tool result"):
+            continue
+        
+        tool_name = msg.get("name", "unknown")
+        char_count = len(content)
+        preview = content[:200].rstrip()
+        
+        msg["content"] = (
+            f"[Shrunk tool result from '{tool_name}' — originally {char_count:,} chars]\n"
+            f"Preview: {preview}..."
+        )
+    
+    return messages
+
+
+def trim_memory(messages, max_tokens, console, model):
+    """Trims the agent's memory to stay within context window limits using token counting."""
+    # Proactively shrink old tool results before counting tokens
+    messages = shrink_old_tool_results(messages)
+
+    def count_message_tokens(msg):
+        """Count tokens for a single message using the model's tokenizer."""
+        content = msg.get("content", "") if isinstance(msg, dict) else getattr(msg, "content", "")
         tool_calls = msg.get("tool_calls", []) if isinstance(msg, dict) else getattr(msg, "tool_calls", [])
-        return len(str(content)) + len(str(tool_calls))
+        text = str(content or "")
+        if tool_calls:
+            text += " " + str(tool_calls)
+        try:
+            return litellm.token_counter(model=model, text=text)
+        except Exception:
+            return len(text) // 4  # Fallback: ~4 chars per token
 
-    total_length = sum(get_msg_length(m) for m in messages)
+    total_tokens = sum(count_message_tokens(m) for m in messages)
 
-    if total_length > max_chars:
-        console.print(f"\n[dim yellow] Memory reached {total_length} chars. Summarizing older messages...[/dim yellow]")
+    if total_tokens > max_tokens:
+        console.print(f"\n[dim yellow]⚡ Memory reached {total_tokens:,} tokens (limit: {max_tokens:,}). Summarizing older messages...[/dim yellow]")
         
         system_prompt = messages[0]
         tail = messages[-8:]
@@ -105,7 +162,7 @@ def trim_memory(messages, max_chars, console, model):
         }
         
         messages = [system_prompt, summary_message] + tail
-        console.print(f"[dim yellow] Memory optimized. Resuming with {sum(get_msg_length(m) for m in messages)} chars.[/dim yellow]")
+        console.print(f"[dim yellow]⚡ Memory optimized. Resuming with {sum(count_message_tokens(m) for m in messages):,} tokens.[/dim yellow]")
 
     return messages
 
@@ -176,7 +233,10 @@ def execute_tool(function_name, args, working_dir, approve_all, console):
                 
             elif function_name == "run_compiler":
                 function_result = run_compiler(working_dir, args.get("file_path"))
-                console.print(f"[dim]Compiled file: {args.get('file_path')}[/dim]")
+                if "FATAL SYNTAX ERROR" in function_result or "Error" in function_result:
+                    console.print(Panel(function_result, title=f"❌ Compile Failed: {args.get('file_path')}", border_style="red"))
+                else:
+                    console.print(f"[green]✓ {function_result}[/green]")
 
     elif function_name == "write_file":
         file_path = args.get("file_path")
@@ -230,7 +290,12 @@ def execute_tool(function_name, args, working_dir, approve_all, console):
         if ask_approval(console, f"Agent wants to EXECUTE '{file_path}'.", approve_all):
             with console.status(f"[bold cyan]Executing {file_path}...[/bold cyan]", spinner="dots"):
                 function_result = run_python_file(working_dir, file_path, script_args)
-                console.print(f"[dim]Executed: {file_path}[/dim]")
+            # Show execution output to the user in a visible panel
+            output_text = function_result.strip()
+            if "Error" in function_result or "Traceback" in function_result or "Process exited with code" in function_result:
+                console.print(Panel(output_text, title=f"❌ Execution: {file_path}", border_style="red"))
+            else:
+                console.print(Panel(output_text, title=f"✓ Output: {file_path}", border_style="green"))
         else:
             function_result = "SYSTEM ERROR: User denied permission."
     
