@@ -8,10 +8,7 @@ from token_tracker import TokenTracker, get_max_context_tokens
 
 PROVIDER_KEY_MAP = {
     "mistral/": "MISTRAL_API_KEY",
-    "gpt-": "OPENAI_API_KEY",
-    "o1": "OPENAI_API_KEY",
-    "o3": "OPENAI_API_KEY",
-    "o4": "OPENAI_API_KEY",
+    "openai/": "OPENAI_API_KEY",
     "anthropic/": "ANTHROPIC_API_KEY",
     "claude-": "ANTHROPIC_API_KEY",
     "gemini/": "GEMINI_API_KEY",
@@ -22,7 +19,7 @@ def resolve_api_key_env(model_name):
     for prefix, env_var in PROVIDER_KEY_MAP.items():
         if model_name.startswith(prefix):
             return env_var
-    return "OPENAI_API_KEY"
+    return None
 
 def main():
     parser = argparse.ArgumentParser(description="CLI Coding Assistant")
