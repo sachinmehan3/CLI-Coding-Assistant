@@ -9,11 +9,11 @@ def get_file_content(working_directory, file_path):
 
     # Prevent the agent from trying to read system files outside the workspace
     if not abs_file_path.startswith(abs_working_directory):
-        return f'Error: "{file_path} is not a in the working directory.' 
+        return f'Error: "{file_path}" is not in the working directory.' 
 
     # Verify the file actually exists on disk
     if not os.path.isfile(abs_file_path):
-        return f'Error: "{file_path} is not a valid file'
+        return f'Error: "{file_path}" is not a valid file.'
     
 
     file_content_string = ""
