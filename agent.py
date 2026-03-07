@@ -7,7 +7,7 @@ from ai_utils import safe_completion
 from agent_tools import AGENT_TOOLS
 from agent_helpers import trim_memory, execute_tool
 from subagent import run_subagent
-from token_tracker import TokenTracker, get_max_context_tokens
+from token_tracker import get_max_context_tokens
 
 AGENT_SYSTEM_PROMPT = (
     "You are an expert, fully autonomous coding agent working inside a project directory. "
