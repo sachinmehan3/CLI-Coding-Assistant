@@ -1,4 +1,5 @@
 import litellm
+from functools import lru_cache
 
 
 class TokenTracker:
@@ -44,6 +45,7 @@ class TokenTracker:
         )
 
 
+@lru_cache(maxsize=None)
 def get_max_context_tokens(model: str, fallback: int = 30000) -> int:
     """Returns ~80% of the model's context window, or a fallback if unknown."""
     try:
